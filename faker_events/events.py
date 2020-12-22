@@ -20,8 +20,25 @@ class EventType():
     """
     Base Class for new Event Types
     """
+
+    _next_event = None
+
     def __init__(self, limit: int = None):
         self.limit = limit
+
+    @property
+    def next(self):
+        """
+        View the next event, or use a statement to set the event.
+        """
+        return self._next_event
+
+    @next.setter
+    def next(self, event):
+        if isinstance(event, EventType):
+            self._next_event = event
+        else:
+            raise TypeError("Event must be an EventType")
 
     def profiled(self, profile: dict ) -> dict:
         """
@@ -58,7 +75,9 @@ class EventGenerator():
     The Event Generator is the central engine.  It creates profiles,
     and events to be sent to the Handlers.
     """
-    event = ExampleEvent()
+
+    _events = {}
+    _state = []
 
     def __init__(self,
                  num_profile: int = 10,
@@ -79,22 +98,44 @@ class EventGenerator():
             self.create_profiles()
 
         self.stream = stream if stream else Stream()
+        self.events = ExampleEvent()
 
     def create_events(self):
         """
         Selects a profile to be used, and will request the Event Type
         to process the data if available.
         """
-        while True:
-            selected_profile = random.choice(self.profiles)
+
+        count = 0
+
+        while self._state:
+            sindex = random.randint(0, len(self._state)-1)
+
+            pindex = self._state[sindex][0]
+            event = self._state[sindex][2]
+            selected_profile = self.profiles[pindex]
             selected_profile['event_time'] = datetime.now().isoformat()
 
             try:
-                event = self.event.profiled(selected_profile)
+                result = event.profiled(selected_profile)
             except NotImplementedError:
-                event = self.event.event
+                result = event.event
 
-            yield event
+            count += 1
+            yield result
+
+            try:
+                self._state[sindex][1] -= 1
+
+                if self._state[sindex][1] == 0 and event.next is None:
+                    del self._state[sindex]
+                elif self._state[sindex][1] == 0:
+                    self._state[sindex][1] = event.next.limit
+                    self._state[sindex][2] = event.next
+            except TypeError:
+                pass
+
+        print(f'No more events found.  {count} in total generated')
 
     def create_profiles(self):
         """
@@ -131,6 +172,19 @@ class EventGenerator():
             result.append(profile)
 
         self.profiles = result
+
+    @property
+    def events(self):
+        """
+        View the first event, or use a statement to set the event.
+        """
+        return self._events
+
+    @events.setter
+    def events(self, first_event: EventType):
+        self._event = first_event
+        self._state = [[index, first_event.limit, first_event]
+                       for index, _ in enumerate(self.profiles)]
 
     def live_stream(self, epm: int = 60, indent: int = None) -> str:
         """

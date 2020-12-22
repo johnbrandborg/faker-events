@@ -64,6 +64,47 @@ class NewEvent(faker_events.EventType):
         return self.event
 
 eg = faker_events.EventGenerator(num_profile=2)
-eg.event = NewEvent()
+eg.events = NewEvent()
 eg.live_stream()
+```
+
+## Event Sequences
+
+You can sequence the events by setting the next event to occur, and occurence
+on how many times it will happen.  If no limit is set, the next Event Type will
+never be used.
+
+
+```python
+import faker_events
+
+eg = faker_events.EventGenerator(1)
+
+class EventA(faker_events.EventType):
+    event = {'Name': 'A'}
+
+class EventB(faker_events.EventType):
+    event = {'Name': 'B'}
+
+class EventC(faker_events.EventType):
+    event = {'Name': 'C'}
+
+a = EventA(1)
+b = EventB(2)
+c = EventC(1)
+
+a.next = b
+b.next = c
+
+eg.events = a
+eg.live_stream()
+```
+
+**Output**
+```
+{"Name": "A"}
+{"Name": "B"}
+{"Name": "B"}
+{"Name": "C"}
+No more events found.  4 in total generated
 ```

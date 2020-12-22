@@ -30,6 +30,7 @@ setup(
     platforms=["any"],
     python_requires=">=3.6",
     install_requires=[
+        "awscli>=1.18,<1.19",
         "faker>=5.0,<5.1",
         "kafka-python>=2.0,<2.1",
     ],
