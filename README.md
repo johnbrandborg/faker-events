@@ -52,6 +52,25 @@ eg = faker_events.EventGenerator(stream=example)
 eg.live_stream()
 ```
 
+
+### Starting a Batch
+Create an Event Generator and use the batch method, with a start and finish
+datetime object, and the frequncy like on the live stream.
+
+
+```python
+from datetime import datetime, timedelta
+
+import faker_events
+
+eg = faker_events.EventGenerator(1)
+
+start = datetime(2019, 1, 1)  # No one wants to relive 2020...
+finish = start + timedelta(seconds=10)
+
+eg.batch(start, finish, 10)
+```
+
 ### Creating a Custom Record
 Create an Event Type that has an 'event' dictionary.  If you want values to be
 processed for each event, create a function called 'profiled', and thats takes

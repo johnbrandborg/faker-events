@@ -2,7 +2,7 @@
 Events Module
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import random
 import time
@@ -76,7 +76,7 @@ class EventGenerator():
     and events to be sent to the Handlers.
     """
 
-    _events = {}
+    _events = ExampleEvent()
     _state = []
 
     def __init__(self,
@@ -98,7 +98,7 @@ class EventGenerator():
             self.create_profiles()
 
         self.stream = stream if stream else Stream()
-        self.events = ExampleEvent()
+        self._dtstamp = None
 
     def create_events(self):
         """
@@ -114,7 +114,9 @@ class EventGenerator():
             pindex = self._state[sindex][0]
             event = self._state[sindex][2]
             selected_profile = self.profiles[pindex]
-            selected_profile['event_time'] = datetime.now().isoformat()
+
+            selected_profile['event_time'] = self._dtstamp.isoformat()\
+                if self._dtstamp else datetime.now().isoformat()
 
             try:
                 result = event.profiled(selected_profile)
@@ -126,14 +128,14 @@ class EventGenerator():
 
             try:
                 self._state[sindex][1] -= 1
-
-                if self._state[sindex][1] == 0 and event.next is None:
-                    del self._state[sindex]
-                elif self._state[sindex][1] == 0:
-                    self._state[sindex][1] = event.next.limit
-                    self._state[sindex][2] = event.next
             except TypeError:
-                pass
+                continue
+
+            if self._state[sindex][1] == 0 and event.next is None:
+                del self._state[sindex]
+            elif self._state[sindex][1] == 0:
+                self._state[sindex][1] = event.next.limit
+                self._state[sindex][2] = event.next
 
         print(f'Event limit reached.  {count} in total generated')
 
@@ -182,18 +184,58 @@ class EventGenerator():
 
     @events.setter
     def events(self, first_event: EventType):
-        self._event = first_event
-        self._state = [[index, first_event.limit, first_event]
-                       for index, _ in enumerate(self.profiles)]
+        if isinstance(first_event, EventType):
+            self._event = first_event
+        else:
+            raise TypeError("Events must be an EventType")
+
+        self._create_state()
 
     def live_stream(self, epm: int = 60, indent: int = None) -> str:
         """
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
         """
+
+        self._dtstamp = None
+
+        if not self._state:
+            self._create_state()
+
         try:
             for event in self.create_events():
                 self.stream.send(json.dumps(event, indent=indent))
                 time.sleep(random.random() * 60/epm)
         except KeyboardInterrupt:
             print('\nStopping Event Stream')
+
+    def batch(self,
+              start: datetime,
+              finish: datetime,
+              epm: int = 60,
+              indent: int = None) -> str:
+        """
+        Produces a batch of randomly timed events. Events per minute can
+        be adjust, and if the JSON should have indentation of num spaces
+        """
+
+        self._dtstamp = start
+
+        if not self._state:
+            self._create_state()
+
+        try:
+            for event in self.create_events():
+                self.stream.send(json.dumps(event, indent=indent))
+                self._dtstamp += timedelta(seconds=random.random() * 60/epm)
+
+                if self._dtstamp >= finish:
+                    print('Finish time reached')
+                    break
+
+        except KeyboardInterrupt:
+            print('\nStopping Event Batch')
+
+    def _create_state(self):
+        self._state = [[index, self._events.limit, self._events]
+                       for index, _ in enumerate(self.profiles)]
