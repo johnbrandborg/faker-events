@@ -80,10 +80,10 @@ class EventGenerator():
     _state = []
 
     def __init__(self,
-                 num_profile: int = 10,
+                 num_profiles: int = 10,
                  stream: Stream = None,
                  use_profile_file: bool = False):
-        self.num_profile = num_profile
+        self.num_profiles = num_profiles
 
         if use_profile_file:
             try:
@@ -135,7 +135,7 @@ class EventGenerator():
             except TypeError:
                 pass
 
-        print(f'No more events found.  {count} in total generated')
+        print(f'Event limit reached.  {count} in total generated')
 
     def create_profiles(self):
         """
@@ -143,7 +143,7 @@ class EventGenerator():
         """
         result = []
 
-        for _ in range(0, self.num_profile):
+        for _ in range(0, self.num_profiles):
             gender = 'F' if random.randint(0, 1) == 1 else 'M'
 
             if gender == 'F':

@@ -1,17 +1,37 @@
-# faker-events
-Generates Events with formatted fake data for streams 
+# faker-events (Planning)
+Generates Events with formatted fake data for streams.
 
-# Usage
+**NOTE** Don't use this software for anything but exploring use cases.
+It is not tested, it is not quality controlled, it is not even pre-alpha.
 
-## Starting a Stream
-Create an Event Generator and start using Live Stream.
+## Usage
+Using Faker Events is a library, and doesn't come with a CLI.  This is in part
+due to the Events you create being written in Python as objects.
+
+This library utilises the Faker package to generate it's data on the profile.
+Understanding how Faker works is recommended and you can find the documentation
+for it [here](https://faker.readthedocs.io/en/stable/).
+
+Install from GitHub  (No Packaging as it is only in Planning)
+```bash
+pip install git+https://github.com/johnbrandborg/faker-events
+```
+
+### Starting a Stream
+Create an Event Generator and start using Live Stream. By default only 10
+profiles are created.  Giving large numbers can take sometime to build so
+becareful.
+
+Set the "Events Per Minute" on the live_stream method to change the maximum
+allowed, but subject to system performance also.  The default is ~60 per
+minute, but they are random so expect potentially lower rates.
 
 **Console**
 ```python
 import faker_events
 
-eg = faker_events.EventGenerator()
-eg.live_stream()
+eg = faker_events.EventGenerator(num_profiles=100)
+eg.live_stream(epm=120)
 ```
 
 **Kafka**
@@ -32,7 +52,7 @@ eg = faker_events.EventGenerator(stream=example)
 eg.live_stream()
 ```
 
-## Creating a Custom Record
+### Creating a Custom Record
 Create an Event Type that has an 'event' dictionary.  If you want values to be
 processed for each event, create a function called 'profiled', and thats takes
 a dict and returns an updated dict.
@@ -68,7 +88,7 @@ eg.events = NewEvent()
 eg.live_stream()
 ```
 
-## Event Sequences
+### Event Sequences
 
 You can sequence the events by setting the next event to occur, and occurence
 on how many times it will happen.  If no limit is set, the next Event Type will
@@ -106,5 +126,13 @@ eg.live_stream()
 {"Name": "B"}
 {"Name": "B"}
 {"Name": "C"}
-No more events found.  4 in total generated
+Event limited reached.  4 in total generated
 ```
+
+## License
+
+Faker-Events is released under the MIT License. See the bundled LICENSE file for details.
+
+## Credits
+
+* [Daniele Faraglia](https://github.com/joke2k) & [Flavio Curella](https://github.com/fcurella) / [Faker](https://github.com/joke2k/faker)
