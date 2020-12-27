@@ -2,7 +2,7 @@
 Generates Events with formatted fake data for streams.
 
 **NOTE** Don't use this software for anything but exploring use cases.
-It is not tested, it is not quality controlled, it is not even pre-alpha.
+It is not tested, it is not quality controlled, and subject to breaking changes.
 
 ## Usage
 Using Faker Events is a library, and doesn't come with a CLI.  This is in part

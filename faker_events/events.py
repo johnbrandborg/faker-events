@@ -1,30 +1,44 @@
 """
-Events Module
+Events module for creating custom types and generating Messages
 """
+
+__all__ = ['EventType', 'EventGenerator']
 
 from datetime import datetime, timedelta
 import json
 import random
 import time
+import sys
 
 from faker import Faker
-
 from .handlers import Stream
 
 fake = Faker(['en_AU', 'en_NZ'])
-
-__all__ = ['EventType', 'EventGenerator']
 
 
 class EventType():
     """
     Base Class for new Event Types
+
+    Parameters
+    ----------
+        limit: int
+            The number of times to process the event
+
+    Attributes
+    ----------
+        event: dict
+            The base structure used for the Event
     """
 
     _next_event = None
+    event = {}
 
     def __init__(self, limit: int = None):
         self.limit = limit
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(limit={self.limit})'
 
     @property
     def next(self):
@@ -40,17 +54,19 @@ class EventType():
         else:
             raise TypeError("Event must be an EventType")
 
-    def profiled(self, profile: dict ) -> dict:
+    def profiled(self, profile: dict) -> dict:
         """
-        If implemented the Event Creator will execute this
-        method, and use the returned dict.
+        If implemented the Event Creator will execute this method, and use
+        the returned dict.
+
+        The profile can be used for adding details to the event.
         """
         raise NotImplementedError
 
 
 class ExampleEvent(EventType):
     """
-    Example Event if no even is supplied
+    Example Event if no event is supplied to the Generator
     """
     event = {
         'time': '',
@@ -74,6 +90,15 @@ class EventGenerator():
     """
     The Event Generator is the central engine.  It creates profiles,
     and events to be sent to the Handlers.
+
+    Parameters
+    ----------
+        num_profiles: int
+            The number of times to process the event
+        stream: faker_events.Stream
+            Stream handler to use for sending messages
+        use_profile_file: bool
+            Creates and Uses a file for persistant profiles
     """
 
     _events = ExampleEvent()
@@ -118,13 +143,11 @@ class EventGenerator():
             selected_profile['event_time'] = self._dtstamp.isoformat()\
                 if self._dtstamp else datetime.now().isoformat()
 
-            try:
-                result = event.profiled(selected_profile)
-            except NotImplementedError:
-                result = event.event
-
             count += 1
-            yield result
+            try:
+                yield event.profiled(selected_profile)
+            except NotImplementedError:
+                yield event.event
 
             try:
                 self._state[sindex][1] -= 1
@@ -164,7 +187,7 @@ class EventGenerator():
                 'middle_name': middle_name,
                 'last_name': last_name,
                 'date_of_birth': fake.date_of_birth(minimum_age=18,
-                                                    maximum_age=80)\
+                                                    maximum_age=80)
                                      .isoformat(),
                 'email': f'{first_name}.{last_name}@{fake.domain_name()}',
                 'employer_name': fake.company(),
@@ -207,7 +230,7 @@ class EventGenerator():
                 self.stream.send(json.dumps(event, indent=indent))
                 time.sleep(random.random() * 60/epm)
         except KeyboardInterrupt:
-            print('\nStopping Event Stream')
+            print('\nStopping Event Stream', file=sys.stderr)
 
     def batch(self,
               start: datetime,
@@ -230,11 +253,11 @@ class EventGenerator():
                 self._dtstamp += timedelta(seconds=random.random() * 60/epm)
 
                 if self._dtstamp >= finish:
-                    print('Finish time reached')
+                    print('Finish time reached', file=sys.stderr)
                     break
 
         except KeyboardInterrupt:
-            print('\nStopping Event Batch')
+            print('\nStopping Event Batch', file=sys.stderr)
 
     def _create_state(self):
         self._state = [[index, self._events.limit, self._events]

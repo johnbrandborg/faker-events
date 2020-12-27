@@ -1,16 +1,27 @@
 """
-Handlers Module
+Stream handlers for sending messages
 """
+
+__all__ = ['Stream']
 
 import boto3
 from kafka import KafkaProducer
-
-__all__ = ['Stream']
 
 
 class Stream():
     """
     A Handler for sending events to a Data Steam. By default events are printed
+
+    Parameters
+    ----------
+        stype: str
+            Stream Type. 'console', 'kafka' or 'kinesis'
+        host: str
+            Host to connect too (Used for Kafka)
+        name: str
+            Topic Name for Kafka or Stream Name for Kinesis
+        key: str
+            Partition Key to be used.  (Required for Kinesis)
     """
 
     def __init__(self,
@@ -32,7 +43,7 @@ class Stream():
         else:
             raise ValueError('Unknown stream type')
 
-    def _setup_kafka(self) -> object :
+    def _setup_kafka(self) -> object:
         if self.host is None:
             raise ValueError('A host name  must be supplied with Kafka')
 
