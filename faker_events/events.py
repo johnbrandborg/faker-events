@@ -13,8 +13,6 @@ import sys
 from faker import Faker
 from .handlers import Stream
 
-fake = Faker(['en_AU', 'en_NZ'])
-
 
 class EventType():
     """
@@ -33,6 +31,7 @@ class EventType():
 
     _next_event = None
     event = {}
+    event_id = 1
 
     def __init__(self, limit: int = None):
         self.limit = limit
@@ -99,16 +98,22 @@ class EventGenerator():
             Stream handler to use for sending messages
         use_profile_file: bool
             Creates and Uses a file for persistant profiles
+        fake: Faker
+            Customised Faker instance otherise one is created
     """
 
-    _events = ExampleEvent()
+    _dtstamp = None
+    _first_event = ExampleEvent()
     _state = []
 
     def __init__(self,
                  num_profiles: int = 10,
                  stream: Stream = None,
-                 use_profile_file: bool = False):
+                 use_profile_file: bool = False,
+                 fake: Faker = None):
+        self.fake = fake
         self.num_profiles = num_profiles
+        self.stream = stream if stream else Stream()
 
         if use_profile_file:
             try:
@@ -121,9 +126,6 @@ class EventGenerator():
                     profiles_file.write(json.dumps(self.profiles))
         else:
             self.create_profiles()
-
-        self.stream = stream if stream else Stream()
-        self._dtstamp = None
 
     def create_events(self):
         """
@@ -148,6 +150,7 @@ class EventGenerator():
                 yield event.profiled(selected_profile)
             except NotImplementedError:
                 yield event.event
+            event.event_id += 1
 
             try:
                 self._state[sindex][1] -= 1
@@ -166,6 +169,7 @@ class EventGenerator():
         """
         Creates the fake profiles that will be used for event creation.
         """
+        fake = self.fake if self.fake else Faker()
         result = []
 
         for _ in range(0, self.num_profiles):
@@ -174,24 +178,43 @@ class EventGenerator():
             if gender == 'F':
                 first_name = fake.first_name_female()
                 middle_name = fake.first_name_female()
+                prefix_name = fake.prefix_female()
+                suffix_name = fake.suffix_female()
             else:
                 first_name = fake.first_name_male()
                 middle_name = fake.first_name_male()
+                prefix_name = fake.prefix_male()
+                suffix_name = fake.suffix_male()
 
             last_name = fake.last_name()
-
+            address = '{{building_number}}|{{street_name}}|{{state_abbr}}' \
+                      '|{{postcode}}|{{city}}'
+            address1 = fake.parse(address).split('|')
             profile = {
-                'id': fake.pyint(),
+                'id': fake.unique.random_number(),
+                'uuid': fake.uuid4(),
+                'username': fake.user_name(),
                 'gender': gender,
                 'first_name': first_name,
                 'middle_name': middle_name,
                 'last_name': last_name,
-                'date_of_birth': fake.date_of_birth(minimum_age=18,
-                                                    maximum_age=80)
-                                     .isoformat(),
+                'prefix_name': prefix_name,
+                'suffix_name': suffix_name,
+                'birthdate': fake.date_of_birth(minimum_age=18,
+                                                maximum_age=80).isoformat(),
                 'email': f'{first_name}.{last_name}@{fake.domain_name()}',
-                'employer_name': fake.company(),
+                'employer': fake.company(),
                 'job': fake.job(),
+                'full_address1': ' '.join(address1),
+                'building_number1': address1[0],
+                'street_name1': address1[1].split(' ')[0],  # TODO This is Ugly
+                'street_suffix1': address1[1].split(' ')[1],
+                'state1': address1[2],
+                'postcode1': address1[3],
+                'city1': address1[4],
+                'phone1': fake.phone_number(),
+                'driver_license': fake.bothify('?#####'),  # TODO This should be a provider
+                'license_plate': fake.license_plate(),
             }
 
             result.append(profile)
@@ -199,20 +222,20 @@ class EventGenerator():
         self.profiles = result
 
     @property
-    def events(self):
+    def event(self):
         """
         View the first event, or use a statement to set the event.
         """
-        return self._events
+        return self._first_event
 
-    @events.setter
-    def events(self, first_event: EventType):
-        if isinstance(first_event, EventType):
-            self._event = first_event
+    @event.setter
+    def event(self, event: EventType):
+        if isinstance(event, EventType):
+            self._first_event = event
         else:
-            raise TypeError("Events must be an EventType")
+            raise TypeError("Events must be an EventType instance")
 
-        self._create_state()
+        self.create_state()
 
     def live_stream(self, epm: int = 60, indent: int = None) -> str:
         """
@@ -223,7 +246,7 @@ class EventGenerator():
         self._dtstamp = None
 
         if not self._state:
-            self._create_state()
+            self.create_state()
 
         try:
             for event in self.create_events():
@@ -245,7 +268,7 @@ class EventGenerator():
         self._dtstamp = start
 
         if not self._state:
-            self._create_state()
+            self.create_state()
 
         try:
             for event in self.create_events():
@@ -259,6 +282,9 @@ class EventGenerator():
         except KeyboardInterrupt:
             print('\nStopping Event Batch', file=sys.stderr)
 
-    def _create_state(self):
-        self._state = [[index, self._events.limit, self._events]
+    def create_state(self):
+        """
+        Creates the state table used for tracking event generation
+        """
+        self._state = [[index, self.event.limit, self.event]
                        for index, _ in enumerate(self.profiles)]
