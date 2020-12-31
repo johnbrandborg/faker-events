@@ -222,14 +222,14 @@ class EventGenerator():
         self.profiles = result
 
     @property
-    def event(self):
+    def first_event(self):
         """
         View the first event, or use a statement to set the event.
         """
         return self._first_event
 
-    @event.setter
-    def event(self, event: EventType):
+    @first_event.setter
+    def first_event(self, event: EventType):
         if isinstance(event, EventType):
             self._first_event = event
         else:
@@ -286,5 +286,5 @@ class EventGenerator():
         """
         Creates the state table used for tracking event generation
         """
-        self._state = [[index, self.event.limit, self.event]
+        self._state = [[index, self.first_event.limit, self.first_event]
                        for index, _ in enumerate(self.profiles)]

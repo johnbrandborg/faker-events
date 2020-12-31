@@ -103,7 +103,7 @@ class NewEvent(faker_events.EventType):
         return self.event
 
 eg = faker_events.EventGenerator(num_profile=2)
-eg.events = NewEvent()
+eg.first_event = NewEvent()
 eg.live_stream()
 ```
 
@@ -135,7 +135,7 @@ c = EventC(1)
 a.next = b
 b.next = c
 
-eg.events = a
+eg.first_event = a
 eg.live_stream()
 ```
 
