@@ -148,6 +148,63 @@ eg.live_stream()
 Event limited reached.  4 in total generated
 ```
 
+### Using the Profile for Event State
+
+If you need to update the details of the profile, or add persistant data from
+the events you can do so within the Profiled method of the EventType instance.
+
+```python
+import faker_events
+
+eg = faker_events.EventGenerator(1)
+
+class EventA(faker_events.EventType):
+    event = {'Name': 'A', 'LastEvent': 'none'}
+
+    def profiled(self, profile):
+        profile['LastEvent'] = self.__class__.__name__
+        return self.event
+
+class EventB(faker_events.EventType):
+    event = {'Name': 'B', 'LastEvent': 'none'}
+
+    def profiled(self, profile):
+        new_details = {
+            'LastEvent': profile.get('LastEvent')
+        }
+        self.event.update(new_details)
+        profile['LastEvent'] = self.__class__.__name__
+        return self.event
+
+class EventC(faker_events.EventType):
+    event = {'Name': 'C', 'LastEvent': 'none'}
+
+    def profiled(self, profile):
+        new_details = {
+            'LastEvent': profile.get('LastEvent')
+        }
+        self.event.update(new_details)
+        return self.event
+
+a = EventA(1)
+b = EventB(1)
+c = EventC(1)
+
+a.next = b
+b.next = c
+
+eg.first_event = a
+eg.live_stream()
+```
+
+Output
+```
+{"Name": "A", "LastEvent": "none"}
+{"Name": "B", "LastEvent": "EventA"}
+{"Name": "C", "LastEvent": "EventB"}
+Event limit reached.  3 in total generated
+```
+
 ## License
 
 Faker-Events is released under the MIT License. See the bundled LICENSE file for details.
