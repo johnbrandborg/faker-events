@@ -34,6 +34,28 @@ eg = faker_events.EventGenerator(num_profiles=100)
 eg.live_stream(epm=120)
 ```
 
+Output
+```json
+{"type": "example", "event_id": 1, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
+{"type": "example", "event_id": 2, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
+{"type": "example", "event_id": 3, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+{"type": "example", "event_id": 4, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+{"type": "example", "event_id": 5, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+{"type": "example", "event_id": 6, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
+{"type": "example", "event_id": 7, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+{"type": "example", "event_id": 8, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
+{"type": "example", "event_id": 9, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+{"type": "example", "event_id": 10, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+^C
+Stopping Event Stream
+```
+
+#### Using Stream Handlers
+
+By default the JSON messages are only displayed on the standard output.  You
+can however create a stream handler to send the JSON messages to Kakfa, or
+Kinesis.
+
 **Kafka**
 ```python
 import faker_events
@@ -51,7 +73,6 @@ example = faker_events.Stream(stype='kinesis', name='example', key='key')
 eg = faker_events.EventGenerator(stream=example)
 eg.live_stream()
 ```
-
 
 ### Starting a Batch
 Create an Event Generator and use the batch method, with a start and finish

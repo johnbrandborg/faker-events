@@ -76,17 +76,15 @@ class ExampleEvent(EventType):
     Example Event if no event is supplied to the Generator
     """
     event = {
-        'time': '',
         'type': 'example',
-        'id': '',
-        'name': '',
     }
 
     def profiled(self, profile: dict) -> dict:
         updates = {
-            'time': profile.get('event_time'),
-            'id': profile.get('id'),
-            'name': profile.get('first_name'),
+            'event_id': self.event_id,
+            'user_id': profile.get('id'),
+            'first_name': profile.get('first_name'),
+            'last_name': profile.get('last_name'),
         }
         self.event.update(updates)
 
