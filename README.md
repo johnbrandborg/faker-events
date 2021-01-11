@@ -92,6 +92,44 @@ finish = start + timedelta(seconds=10)
 eg.batch(start, finish, epm=10)
 ```
 
+### Profile Data Points
+
+When you create the Event Generator, the profiles you will use in the events
+are created with a number of data points. Below is a list that can be used
+within the Profiled method of the EventType.
+
+* id
+* uuid
+* username
+* gender
+* first_name
+* last_name
+* prefix_name
+* suffix_name
+* birthdate
+* blood_group
+* email
+* employer
+* job
+* full_address1
+* building_number1
+* street_name1
+* street_suffix1
+* state1
+* postcode1
+* city1
+* phone1
+* full_address2
+* building_number2
+* street_name2
+* street_suffix2
+* state2
+* postcode2
+* city2
+* phone2
+* driver_license
+* license_plate
+
 ### Creating a Custom Record
 Create an Event Type that has an 'event' dictionary.  If you want values to be
 processed for each event, create a function called 'profiled', and thats takes

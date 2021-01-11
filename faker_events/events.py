@@ -174,7 +174,7 @@ class EventGenerator():
         result = []
 
         for _ in range(0, self.num_profiles):
-            gender = 'F' if random.randint(0, 1) == 1 else 'M'
+            gender = random.choice(['M', 'F']) 
 
             if gender == 'F':
                 first_name = fake.first_name_female()
@@ -203,18 +203,28 @@ class EventGenerator():
                 'suffix_name': suffix_name,
                 'birthdate': fake.date_of_birth(minimum_age=18,
                                                 maximum_age=80).isoformat(),
+                'blood_group': random.choice(["A", "B", "AB", "O"]) +
+                               random.choice(["+", "-"]),
                 'email': f'{first_name}.{last_name}@{fake.domain_name()}',
                 'employer': fake.company(),
                 'job': fake.job(),
                 'full_address1': ' '.join(address1),
                 'building_number1': address1[0],
-                'street_name1': address1[1].split(' ')[0],  # TODO This is Ugly
+                'street_name1': address1[1].split(' ')[0],
                 'street_suffix1': address1[1].split(' ')[1],
                 'state1': address1[2],
                 'postcode1': address1[3],
                 'city1': address1[4],
                 'phone1': fake.phone_number(),
-                'driver_license': fake.bothify('?#####'),  # TODO This should be a provider
+                'full_address2': ' '.join(address1),
+                'building_number2': address1[0],
+                'street_name2': address1[1].split(' ')[0],
+                'street_suffix2': address1[1].split(' ')[1],
+                'state2': address1[2],
+                'postcode2': address1[3],
+                'city2': address1[4],
+                'phone2': fake.phone_number(),
+                'driver_license': fake.bothify('?#####'),
                 'license_plate': fake.license_plate(),
             }
 
