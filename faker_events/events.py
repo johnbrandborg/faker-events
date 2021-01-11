@@ -36,6 +36,13 @@ class EventType():
     def __init__(self, limit: int = None):
         self.limit = limit
 
+    def __call__(self, profile=None):
+        try:
+            self.profiled(profile)
+        except NotImplementedError:
+            pass
+        return self.event
+
     def __repr__(self):
         return f'{self.__class__.__name__}(limit={self.limit})'
 
@@ -53,12 +60,13 @@ class EventType():
         else:
             raise TypeError("Event must be an EventType")
 
-    def profiled(self, profile: dict) -> dict:
+    def profiled(self, profile: dict) -> None:
         """
-        If implemented the Event Creator will execute this method, and use
-        the returned dict.
+        If implemented the Event Creator will execute this method, and update
+        the event dict on the instance before it is used.
 
-        The profile can be used for adding details to the event.
+        The profile can be used for adding details to the event, or updated
+        to carry information onward to other events in the sequence.
         """
         raise NotImplementedError
 
@@ -81,8 +89,6 @@ class ExampleEvent(EventType):
             'name': profile.get('first_name'),
         }
         self.event.update(updates)
-
-        return self.event
 
 
 class EventGenerator():
@@ -146,10 +152,7 @@ class EventGenerator():
                 if self._dtstamp else datetime.now().isoformat()
 
             count += 1
-            try:
-                yield event.profiled(selected_profile)
-            except NotImplementedError:
-                yield event.event
+            yield event(selected_profile)
             event.event_id += 1
 
             try:

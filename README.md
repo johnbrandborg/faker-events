@@ -63,12 +63,12 @@ from datetime import datetime, timedelta
 
 import faker_events
 
-eg = faker_events.EventGenerator(1)
+eg = faker_events.EventGenerator(num_profiles=1)
 
 start = datetime(2019, 1, 1)  # No one wants to relive 2020...
 finish = start + timedelta(seconds=10)
 
-eg.batch(start, finish, 10)
+eg.batch(start, finish, epm=10)
 ```
 
 ### Creating a Custom Record
@@ -94,15 +94,14 @@ class NewEvent(faker_events.EventType):
         'Profiled': '',
     }
 
-    def profiled(self, profile: dict ) -> dict:
+    def profiled(self, profile):
         new_details = {
             'Always': fake.boolean(),
             'Profiled': profile.get('email'),
         }
         self.event.update(new_details)
-        return self.event
 
-eg = faker_events.EventGenerator(num_profile=2)
+eg = faker_events.EventGenerator(num_profiles=2)
 eg.first_event = NewEvent()
 eg.live_stream()
 ```
@@ -117,7 +116,7 @@ never be used.
 ```python
 import faker_events
 
-eg = faker_events.EventGenerator(1)
+eg = faker_events.EventGenerator(num_profiles=1)
 
 class EventA(faker_events.EventType):
     event = {'Name': 'A'}
@@ -152,39 +151,32 @@ Event limited reached.  4 in total generated
 
 If you need to update the details of the profile, or add persistant data from
 the events you can do so within the Profiled method of the EventType instance.
+When using sequenced events, the profile can be used to retrieve the data from
+previous events.
 
 ```python
 import faker_events
 
-eg = faker_events.EventGenerator(1)
+eg = faker_events.EventGenerator(num_profiles=1)
 
 class EventA(faker_events.EventType):
     event = {'Name': 'A', 'LastEvent': 'none'}
 
     def profiled(self, profile):
         profile['LastEvent'] = self.__class__.__name__
-        return self.event
 
 class EventB(faker_events.EventType):
     event = {'Name': 'B', 'LastEvent': 'none'}
 
     def profiled(self, profile):
-        new_details = {
-            'LastEvent': profile.get('LastEvent')
-        }
-        self.event.update(new_details)
+        self.event['LastEvent'] = profile.get('LastEvent')
         profile['LastEvent'] = self.__class__.__name__
-        return self.event
 
 class EventC(faker_events.EventType):
     event = {'Name': 'C', 'LastEvent': 'none'}
 
     def profiled(self, profile):
-        new_details = {
-            'LastEvent': profile.get('LastEvent')
-        }
-        self.event.update(new_details)
-        return self.event
+        self.event['LastEvent'] = profile.get('LastEvent')
 
 a = EventA(1)
 b = EventB(1)
