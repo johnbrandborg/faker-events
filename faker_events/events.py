@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import json
 import random
 import time
+import types
 import sys
 
 from faker import Faker
@@ -32,6 +33,7 @@ class EventType():
     _next_event = None
     event = {}
     event_id = 1
+    event_time = None
 
     def __init__(self, limit: int = None):
         self.limit = limit
@@ -82,9 +84,9 @@ class ExampleEvent(EventType):
     def profiled(self, profile: dict) -> dict:
         updates = {
             'event_id': self.event_id,
-            'user_id': profile.get('id'),
-            'first_name': profile.get('first_name'),
-            'last_name': profile.get('last_name'),
+            'user_id': profile.id,
+            'first_name': profile.first_name,
+            'last_name': profile.last_name,
         }
         self.event.update(updates)
 
@@ -122,12 +124,15 @@ class EventGenerator():
         if use_profile_file:
             try:
                 with open('profiles.json') as profiles_file:
-                    self.profiles = json.loads(profiles_file.read())
+                    profiles_dicts = json.loads(profiles_file.read())
+                    self.profiles = [types.SimpleNamespace(**profiles)
+                                     for profiles in profiles_dicts]
             except FileNotFoundError:
                 self.create_profiles()
 
                 with open('profiles.json', 'w') as profiles_file:
-                    profiles_file.write(json.dumps(self.profiles))
+                    profiles_dicts = [vars(item) for item in self.profiles]
+                    profiles_file.write(json.dumps(profiles_dicts))
         else:
             self.create_profiles()
 
@@ -146,7 +151,7 @@ class EventGenerator():
             event = self._state[sindex][2]
             selected_profile = self.profiles[pindex]
 
-            selected_profile['event_time'] = self._dtstamp.isoformat()\
+            event.event_time = self._dtstamp.isoformat() \
                 if self._dtstamp else datetime.now().isoformat()
 
             count += 1
@@ -173,8 +178,8 @@ class EventGenerator():
         fake = self.fake if self.fake else Faker()
         result = []
 
-        for _ in range(0, self.num_profiles):
-            gender = random.choice(['M', 'F']) 
+        for _ in range(self.num_profiles):
+            gender = random.choice(['M', 'F'])
 
             if gender == 'F':
                 first_name = fake.first_name_female()
@@ -203,8 +208,8 @@ class EventGenerator():
                 'suffix_name': suffix_name,
                 'birthdate': fake.date_of_birth(minimum_age=18,
                                                 maximum_age=80).isoformat(),
-                'blood_group': random.choice(["A", "B", "AB", "O"]) +
-                               random.choice(["+", "-"]),
+                'blood_group': (random.choice(["A", "B", "AB", "O"]) +
+                                random.choice(["+", "-"])),
                 'email': f'{first_name}.{last_name}@{fake.domain_name()}',
                 'employer': fake.company(),
                 'job': fake.job(),
@@ -228,7 +233,7 @@ class EventGenerator():
                 'license_plate': fake.license_plate(),
             }
 
-            result.append(profile)
+            result.append(types.SimpleNamespace(**profile))
 
         self.profiles = result
 

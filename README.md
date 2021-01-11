@@ -50,7 +50,7 @@ Output
 Stopping Event Stream
 ```
 
-#### Using Stream Handlers
+### Using Stream Handlers
 
 By default the JSON messages are only displayed on the standard output.  You
 can however create a stream handler to send the JSON messages to Kakfa, or
@@ -92,11 +92,21 @@ finish = start + timedelta(seconds=10)
 eg.batch(start, finish, epm=10)
 ```
 
+## Data Points
+
+### Event Data Points
+
+The Event Type has some basic data points about the event that can be used
+within the profiled method. (Access the Attribute using self)
+
+* event_id - The id of the particular event
+* event_time - The time the event occured (ISO Format)
+
 ### Profile Data Points
 
 When you create the Event Generator, the profiles you will use in the events
-are created with a number of data points. Below is a list that can be used
-within the Profiled method of the EventType.
+are created with a number of data points. Below is a list of attributes that
+can be used on the 'profile' object within the EventType Profiled method.
 
 * id
 * uuid
@@ -130,7 +140,7 @@ within the Profiled method of the EventType.
 * driver_license
 * license_plate
 
-### Creating a Custom Record
+## Creating a Custom Record
 Create an Event Type that has an 'event' dictionary.  If you want values to be
 processed for each event, create a function called 'profiled', and thats takes
 a dict and returns an updated dict.
@@ -156,7 +166,7 @@ class NewEvent(faker_events.EventType):
     def profiled(self, profile):
         new_details = {
             'Always': fake.boolean(),
-            'Profiled': profile.get('email'),
+            'Profiled': profile.email,
         }
         self.event.update(new_details)
 
@@ -165,7 +175,7 @@ eg.first_event = NewEvent()
 eg.live_stream()
 ```
 
-### Event Sequences
+## Event Sequences
 
 You can sequence the events by setting the next event to occur, and occurence
 on how many times it will happen.  If no limit is set, the next Event Type will
@@ -222,20 +232,20 @@ class EventA(faker_events.EventType):
     event = {'Name': 'A', 'LastEvent': 'none'}
 
     def profiled(self, profile):
-        profile['LastEvent'] = self.__class__.__name__
+        profile.LastEvent = self.__class__.__name__
 
 class EventB(faker_events.EventType):
     event = {'Name': 'B', 'LastEvent': 'none'}
 
     def profiled(self, profile):
-        self.event['LastEvent'] = profile.get('LastEvent')
-        profile['LastEvent'] = self.__class__.__name__
+        self.event['LastEvent'] = profile.LastEvent
+        profile.LastEvent = self.__class__.__name__
 
 class EventC(faker_events.EventType):
     event = {'Name': 'C', 'LastEvent': 'none'}
 
     def profiled(self, profile):
-        self.event['LastEvent'] = profile.get('LastEvent')
+        self.event['LastEvent'] = profile.LastEvent
 
 a = EventA(1)
 b = EventB(1)
