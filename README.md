@@ -1,4 +1,4 @@
-# faker-events (Planning)
+# faker-events
 Generates Events with formatted fake data for streams.
 
 **NOTE** Don't use this software for anything but exploring use cases.
@@ -12,9 +12,9 @@ This library utilises the Faker package to generate it's data on the profile.
 Understanding how Faker works is recommended and you can find the documentation
 for it [here](https://faker.readthedocs.io/en/stable/).
 
-Install from GitHub  (No Packaging as it is only in Planning)
+**Installation with Streams**
 ```bash
-pip install git+https://github.com/johnbrandborg/faker-events
+pip install faker-events[kafka, kinesis]
 ```
 
 ### Starting a Stream

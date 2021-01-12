@@ -2,8 +2,6 @@
 Events module for creating custom types and generating Messages
 """
 
-__all__ = ['EventType', 'EventGenerator']
-
 from datetime import datetime, timedelta
 import json
 import random
@@ -13,6 +11,8 @@ import sys
 
 from faker import Faker
 from .handlers import Stream
+
+__all__ = ['EventType', 'EventGenerator']
 
 
 class EventType():

@@ -23,5 +23,7 @@
 Faker-Events Library for Generating Events with formatted fake data for streams
 """
 
-from .events import *
-from .handlers import *
+from .events import EventGenerator, EventType  # noqa
+from .handlers import Stream  # noqa
+
+__all__ = ['EventGenerator', 'EventType', 'Stream']

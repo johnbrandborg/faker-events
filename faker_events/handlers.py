@@ -2,10 +2,10 @@
 Stream handlers for sending messages
 """
 
-__all__ = ['Stream']
-
 import boto3
 from kafka import KafkaProducer
+
+__all__ = ['Stream']
 
 
 class Stream():
