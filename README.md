@@ -3,7 +3,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_faker-events&metric=alert_status)](https://sonarcloud.io/dashboard?id=johnbrandborg_faker-events)
 [![PyPI version](https://badge.fury.io/py/Faker-Events.svg)](https://pypi.org/project/Faker-Events/)
 
-Generates Events with formatted fake data for streams. The intension is for
+Generates Events with formatted fake data for streams. The intention is for
  development and testing purposes without relying on real data.
 
 ## Usage
