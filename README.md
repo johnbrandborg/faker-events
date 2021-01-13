@@ -1,12 +1,10 @@
 # faker-events
-![Python application](https://github.com/johnbrandborg/faker-events/workflows/Python%20application/badge.svg)
+[![Python appliction](https://github.com/johnbrandborg/faker-events/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/faker-events/actions?query=workflow%3A%22Python+application%22)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_faker-events&metric=alert_status)](https://sonarcloud.io/dashboard?id=johnbrandborg_faker-events)
 [![PyPI version](https://badge.fury.io/py/Faker-Events.svg)](https://pypi.org/project/Faker-Events/)
 
-Generates Events with formatted fake data for streams.
-
-**NOTE** Don't use this software for anything but exploring use cases.
-It is not tested, it is not quality controlled, and subject to breaking changes.
+Generates Events with formatted fake data for streams. The intension is for
+ development and testing purposes without relying on real data.
 
 ## Usage
 Using Faker Events is a library, and doesn't come with a CLI.  This is in part
@@ -16,9 +14,18 @@ This library utilises the Faker package to generate it's data on the profile.
 Understanding how Faker works is recommended and you can find the documentation
 for it [here](https://faker.readthedocs.io/en/stable/).
 
-**Installation with Streams**
+### Installation
+By default faker-events simply prints to standard out.  To use a stream, give
+the option when installing.
+
+**Kafka**
 ```bash
-pip install faker-events[kafka, kinesis]
+pip install faker-events[kafka]
+```
+
+**Kinesis**
+```bash
+pip install faker-events[kinesis]
 ```
 
 ### Starting a Stream

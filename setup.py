@@ -24,7 +24,8 @@ KINESIS_REQUIRES = [
 
 TEST_REQUIRES = [
     'flake8',
-    'pytest'
+    'pytest',
+    'pytest-cov'
 ]
 
 with open("README.md") as readme_file:

@@ -1,0 +1,14 @@
+[run]
+include = faker-events/*
+omit =
+    env/*
+    .env/*
+    venv/*
+    tests/*
+    setup.py
+
+[xml]
+output = coverage.xml
+
+[report]
+fail_under = 30
