@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # Disabling shallow clone for SonarCloud
     - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
@@ -34,3 +36,17 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: SonarCloud Scan
+      uses: sonarsource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.organization=johnbrandborg
+          -Dsonar.projectKey=johnbrandborg_faker-events
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.sources=faker-events/
+          -Dsonar.test.exclusions=tests/**
+          -Dsonar.tests=tests/
+          -Dsonar.verbose=true
