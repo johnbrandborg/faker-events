@@ -1,4 +1,6 @@
 # faker-events
+![Python application](https://github.com/johnbrandborg/faker-events/workflows/Python%20application/badge.svg)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_faker-events&metric=alert_status)](https://sonarcloud.io/dashboard?id=johnbrandborg_faker-events)
 Generates Events with formatted fake data for streams.
 
 **NOTE** Don't use this software for anything but exploring use cases.
