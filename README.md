@@ -7,12 +7,15 @@ Generates Events with formatted fake data for streams. The intention is for
  development and testing purposes without relying on real data.
 
 ## Usage
-Using Faker Events is a library, and doesn't come with a CLI.  This is in part
+Faker Events is a package that doesn't come with a CLI.  This is in part
 due to the Events you create being written in Python as objects.
 
-This library utilises the Faker package to generate it's data on the profile.
+The Faker package is utilised to generate the data on the profiles.
 Understanding how Faker works is recommended and you can find the documentation
 for it [here](https://faker.readthedocs.io/en/stable/).
+
+Beyond the profiles though for the custom event types any python data
+generation software can be used.
 
 ### Installation
 By default faker-events simply prints to standard out.  To use a stream, give
@@ -37,7 +40,7 @@ Set the "Events Per Minute" on the live_stream method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
 minute, but they are random so expect potentially lower rates.
 
-**Console**
+**Standard Output**
 ```python
 import faker_events
 
@@ -47,24 +50,26 @@ eg.live_stream(epm=120)
 
 Output
 ```json
-{"type": "example", "event_id": 1, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
-{"type": "example", "event_id": 2, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
-{"type": "example", "event_id": 3, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
-{"type": "example", "event_id": 4, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
-{"type": "example", "event_id": 5, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
-{"type": "example", "event_id": 6, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
-{"type": "example", "event_id": 7, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
-{"type": "example", "event_id": 8, "user_id": 1609288, "first_name": "David", "last_name": "Herrera"}
-{"type": "example", "event_id": 9, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
-{"type": "example", "event_id": 10, "user_id": 500, "first_name": "Samantha", "last_name": "Sanchez"}
+{"type": "example", "event_time": "2021-01-14T19:10:02.678866", "event_id": 1, "user_id": 681, "first_name": "John", "last_name": "Harris"}
+{"type": "example", "event_time": "2021-01-14T19:10:03.468144", "event_id": 2, "user_id": 7, "first_name": "Robert", "last_name": "Lane"}
+{"type": "example", "event_time": "2021-01-14T19:10:04.270969", "event_id": 3, "user_id": 238226092, "first_name": "Michelle", "last_name": "Clayton"}
+{"type": "example", "event_time": "2021-01-14T19:10:04.888072", "event_id": 4, "user_id": 7, "first_name": "Robert", "last_name": "Lane"}
+{"type": "example", "event_time": "2021-01-14T19:10:05.446477", "event_id": 5, "user_id": 573872, "first_name": "Andrew", "last_name": "Oconnor"}
 ^C
 Stopping Event Stream
 ```
 
+If you want to see a demo of  this without writing code, run faker_events as a
+ module from the command line.
+
+```bash
+python -m faker_events
+```
+
 ### Using Stream Handlers
 
-By default the JSON messages are only displayed on the standard output.  You
-can however create a stream handler to send the JSON messages to Kakfa, or
+Once you have installed Faker Events with the Stream type you want you
+can now use a stream handler to send the JSON messages to Kakfa, or
 Kinesis.
 
 **Kafka**
