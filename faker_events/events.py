@@ -83,6 +83,7 @@ class ExampleEvent(EventType):
 
     def profiled(self, profile: dict) -> dict:
         updates = {
+            'event_time': self.event_time,
             'event_id': self.event_id,
             'user_id': profile.id,
             'first_name': profile.first_name,
@@ -144,6 +145,9 @@ class EventGenerator():
 
         count = 0
 
+        if not self._state:
+            self.create_state()
+
         while self._state:
             sindex = random.randint(0, len(self._state)-1)
 
@@ -151,8 +155,8 @@ class EventGenerator():
             event = self._state[sindex][2]
             selected_profile = self.profiles[pindex]
 
-            event.event_time = self._dtstamp.isoformat() \
-                if self._dtstamp else datetime.now().isoformat()
+            event.event_time = self._dtstamp.isoformat('T') \
+                if self._dtstamp else datetime.now().isoformat('T')
 
             count += 1
             yield event(selected_profile)
@@ -261,9 +265,6 @@ class EventGenerator():
 
         self._dtstamp = None
 
-        if not self._state:
-            self.create_state()
-
         try:
             for event in self.create_events():
                 self.stream.send(json.dumps(event, indent=indent))
@@ -282,9 +283,6 @@ class EventGenerator():
         """
 
         self._dtstamp = start
-
-        if not self._state:
-            self.create_state()
 
         try:
             for event in self.create_events():

@@ -2,8 +2,6 @@
 Stream handlers for sending messages
 """
 
-import boto3
-from kafka import KafkaProducer
 
 __all__ = ['Stream']
 
@@ -37,9 +35,9 @@ class Stream():
         if stype == 'console':
             self.send = print
         elif stype == 'kafka':
-            self.send = self._setup_kafka()
+            self._setup_kafka()
         elif stype == 'kinesis':
-            self.send = self._setup_kinesis()
+            self._setup_kinesis()
         else:
             raise ValueError('Unknown stream type')
 
@@ -50,12 +48,12 @@ class Stream():
         if self.name is None:
             raise ValueError('A stream "name" must be supplied with kinesis')
 
+        from kafka import KafkaProducer
         producer = KafkaProducer(bootstrap_servers=[self.host])
 
         def send(message):
             producer.send(topic=self.name, value=message.encode())
-
-        return send
+        self.send = send
 
     def _setup_kinesis(self) -> object:
         if self.name is None:
@@ -64,6 +62,7 @@ class Stream():
         if self.key is None:
             raise ValueError('A partition key must be supplied with Kinesis')
 
+        import boto3
         kinesis = boto3.client('kinesis')
 
         def send(message):
@@ -72,5 +71,4 @@ class Stream():
                 Data=message.encode(),
                 PartitionKey=self.key,
             )
-
-        return send
+        self.send = send
