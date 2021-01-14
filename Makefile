@@ -6,21 +6,24 @@ lint:
 
 patch:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$3++;}END{print $$0}' VERSION` \
-		&& git commit -m 'Version $$NEWVERSION' \
+		&& echo $$NEWVERSION > VERSION \
+		&& git commit -a -m 'Version $$NEWVERSION' \
 		&& git tag v$$NEWVERSION \
-		&& echo $$NEWVERSION > VERSION
+		&& git push --tag
 
 minor:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$2++;}END{print $$0}' VERSION` \
-		&& git commit -m 'Version $$NEWVERSION' \
+		&& echo $$NEWVERSION > VERSION \
+		&& git commit -a -m 'Version $$NEWVERSION' \
 		&& git tag v$$NEWVERSION \
-		&& echo $$NEWVERSION > VERSION
+		&& git push --tag
 
 major:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$1++;}END{print $$0}' VERSION` \
-		&& git commit -m 'Version $$NEWVERSION' \
+		&& echo $$NEWVERSION > VERSION \
+		&& git commit -a -m 'Version $$NEWVERSION' \
 		&& git tag v$$NEWVERSION \
-		&& echo $$NEWVERSION > VERSION
+		&& git push --tag
 
 dev:
 	@pip install -e .[dev]
