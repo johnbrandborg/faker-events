@@ -2,24 +2,22 @@
 
 from setuptools import find_packages, setup
 
-VERSION = "0.0.1"
-
 EXCLUDED_PACKAGES = [
-   "docs",
-   "tests",
-   "tests.*"
+   'docs',
+   'tests',
+   'tests.*'
 ]
 
 INSTALL_REQUIRES = [
-    "faker>=5.0,<5.1",
+    'faker>=5.0,<5.1',
 ]
 
 KAFKA_REQUIRES = [
-    "kafka-python>=2.0,<2.1",
+    'kafka-python>=2.0,<2.1',
 ]
 
 KINESIS_REQUIRES = [
-    "boto3>=1.16,<1.17",
+    'boto3>=1.16,<1.17',
 ]
 
 TEST_REQUIRES = [
@@ -28,12 +26,15 @@ TEST_REQUIRES = [
     'pytest-cov'
 ]
 
-with open("README.md") as readme_file:
+with open('README.md') as readme_file:
     LONG_DESCRIPTION = readme_file.read()
+
+with open('VERSION') as version_file:
+    VERSION = version_file.read().strip()
 
 setup(name='Faker-Events',
       version=VERSION,
-      description="Generates Events with Fake data.",
+      description='Generates Events with Fake data.',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/markdown',
       classifiers=[
@@ -56,7 +57,7 @@ setup(name='Faker-Events',
       url='https://github.com/johnbrandborg/faker-events',
       license='MIT License',
       packages=find_packages(exclude=EXCLUDED_PACKAGES),
-      python_requires=">=3.6",
+      python_requires='>=3.6',
       install_requires=INSTALL_REQUIRES,
       extras_require={
         'dev': TEST_REQUIRES + KAFKA_REQUIRES + KINESIS_REQUIRES,
