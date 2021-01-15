@@ -112,6 +112,7 @@ class EventGenerator():
     _dtstamp = None
     _first_event = ExampleEvent()
     _state = []
+    profiles = []
 
     def __init__(self,
                  num_profiles: int = 10,

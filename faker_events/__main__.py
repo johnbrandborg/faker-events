@@ -6,5 +6,14 @@ Runs the Example EventType
 
 import faker_events
 
-eg = faker_events.EventGenerator()
-eg.live_stream()
+
+def main():
+    """
+    Main Function
+    """
+    event_generator = faker_events.EventGenerator()
+    event_generator.live_stream()
+
+
+if __name__ == '__main__':
+    main()

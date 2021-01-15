@@ -1,5 +1,5 @@
 test:
-	@pytest
+	@pytest -v
 
 lint:
 	@flake8
@@ -8,25 +8,25 @@ patch:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$3++;}END{print $$0}' VERSION` \
 		&& echo $$NEWVERSION > VERSION \
 		&& git commit -a -m "Version $$NEWVERSION" \
-		&& git tag v$$NEWVERSION \
+		&& git tag $$NEWVERSION \
 		&& git push --tag
 
 minor:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$2++;}END{print $$0}' VERSION` \
 		&& echo $$NEWVERSION > VERSION \
 		&& git commit -a -m "Version $$NEWVERSION" \
-		&& git tag v$$NEWVERSION \
+		&& git tag $$NEWVERSION \
 		&& git push --tag
 
 major:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$1++;}END{print $$0}' VERSION` \
 		&& echo $$NEWVERSION > VERSION \
 		&& git commit -a -m "Version $$NEWVERSION" \
-		&& git tag v$$NEWVERSION \
+		&& git tag $$NEWVERSION \
 		&& git push --tag
 
-dev:
-	@pip install -e .[dev]
+develop:
+	@pip install -e .[develop]
 
 clean:
 	@find . -name '__pycache__' | xargs rm -fr
