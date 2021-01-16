@@ -1,5 +1,5 @@
 test:
-	@pytest -v
+	@pytest -vv
 
 lint:
 	@flake8

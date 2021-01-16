@@ -32,7 +32,7 @@ class EventType():
 
     _next_event = None
     event = {}
-    event_id = 1
+    event_id = 0
     event_time = None
 
     def __init__(self, limit: int = None):
@@ -144,14 +144,13 @@ class EventGenerator():
         to process the data if available.
         """
 
-        count = 0
+        total_count = 0
 
-        if not self._state:
-            self.create_state()
+        if self._state == []:
+            self._create_state()
 
         while self._state:
             sindex = random.randint(0, len(self._state)-1)
-
             pindex = self._state[sindex][0]
             event = self._state[sindex][2]
             selected_profile = self.profiles[pindex]
@@ -159,9 +158,9 @@ class EventGenerator():
             event.event_time = self._dtstamp.isoformat('T') \
                 if self._dtstamp else datetime.now().isoformat('T')
 
-            count += 1
-            yield event(selected_profile)
+            total_count += 1
             event.event_id += 1
+            yield event(selected_profile)
 
             try:
                 self._state[sindex][1] -= 1
@@ -174,7 +173,7 @@ class EventGenerator():
                 self._state[sindex][1] = event.next.limit
                 self._state[sindex][2] = event.next
 
-        print(f'Event limit reached.  {count} in total generated')
+        print(f'Event limit reached.  {total_count} in total generated')
 
     def create_profiles(self):
         """
@@ -239,7 +238,6 @@ class EventGenerator():
             }
 
             result.append(types.SimpleNamespace(**profile))
-
         self.profiles = result
 
     @property
@@ -256,7 +254,7 @@ class EventGenerator():
         else:
             raise TypeError("Events must be an EventType instance")
 
-        self.create_state()
+        self._create_state()
 
     def live_stream(self, epm: int = 60, indent: int = None) -> str:
         """
@@ -297,9 +295,6 @@ class EventGenerator():
         except KeyboardInterrupt:
             print('\nStopping Event Batch', file=sys.stderr)
 
-    def create_state(self):
-        """
-        Creates the state table used for tracking event generation
-        """
+    def _create_state(self):
         self._state = [[index, self.first_event.limit, self.first_event]
                        for index, _ in enumerate(self.profiles)]

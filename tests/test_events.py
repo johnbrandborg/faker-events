@@ -1,8 +1,9 @@
 """ Events Tests
 """
 
+from datetime import datetime
 import json
-from types import SimpleNamespace
+from types import GeneratorType, SimpleNamespace
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -41,6 +42,21 @@ def event_profiled():
             """
             self.event['Profiled'] = True
     return Event()
+
+
+@pytest.fixture
+def event_generator_class(profile_sn):
+    mcreate_profiles = Mock()
+    EventGenerator.create_profiles = mcreate_profiles
+    EventGenerator.profiles = [profile_sn]
+    return EventGenerator
+
+
+@pytest.fixture
+def event_generator(event_generator_class):
+    event_generator = event_generator_class()
+    event_generator.first_event = ExampleEvent(1)
+    return event_generator
 
 
 @pytest.fixture
@@ -104,7 +120,7 @@ def test_event_profiled_notimplemented(event):
         event.profiled(None)
 
 
-def test_example_event(profile_sn):
+def test_example_event_update(profile_sn):
     """ ExampleEvent Output
     """
     example_event = ExampleEvent()
@@ -113,7 +129,7 @@ def test_example_event(profile_sn):
     assert example_event.event == {
         'type': 'example',
         'event_time': None,
-        'event_id': 1,
+        'event_id': 0,
         'user_id': 1,
         'first_name': 'John',
         'last_name': 'Smith'
@@ -131,17 +147,40 @@ def test_generator_profile_file_read(profile_json, profile_sn):
     assert event_generator.profiles == [profile_sn]
 
 
-def test_generator_profile_file_create(monkeypatch, profile_sn):
+def test_generator_profile_file_create(event_generator_class):
     """ Create a file for the profile data if not found
     """
-    mcreate_profiles = Mock()
-    monkeypatch.setattr(EventGenerator, 'create_profiles', mcreate_profiles)
-    monkeypatch.setattr(EventGenerator, 'profiles', [profile_sn])
-
     mopen = mock_open()
     mopen.side_effect = [FileNotFoundError, mopen.return_value]
+
     with patch('faker_events.events.open', mopen):
-        EventGenerator(1, None, True)
+        event_generator_class(1, None, True)
 
     assert mopen.call_count == 2
-    assert mcreate_profiles.call_count == 1
+
+
+def test_generator_create_events(event_generator):
+    event_generator._dtstamp = datetime(2019, 1, 1)
+
+    expected = {
+        'event_id': 1,
+        'event_time': '2019-01-01T00:00:00',
+        'first_name': 'John',
+        'last_name': 'Smith',
+        'type': 'example',
+        'user_id': 1
+    }
+    event_gen = event_generator.create_events()
+
+    assert isinstance(event_gen, GeneratorType)
+    assert list(event_gen) == [expected]
+
+
+def test_generator_create_events_resets_state(event_generator):
+    event_generator._state = []
+
+    m_create_state = Mock()
+    event_generator._create_state = m_create_state
+    list(event_generator.create_events())
+
+    m_create_state.assert_called_once()
