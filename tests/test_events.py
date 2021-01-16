@@ -6,6 +6,7 @@ import json
 from types import GeneratorType, SimpleNamespace
 from unittest.mock import Mock, mock_open, patch
 
+import faker
 import pytest
 
 from faker_events.events import (
@@ -45,10 +46,10 @@ def event_profiled():
 
 
 @pytest.fixture
-def event_generator_class(profile_sn):
+def event_generator_class(monkeypatch, profile_sn):
     mcreate_profiles = Mock()
-    EventGenerator.create_profiles = mcreate_profiles
-    EventGenerator.profiles = [profile_sn]
+    monkeypatch.setattr(EventGenerator, 'create_profiles', mcreate_profiles)
+    monkeypatch.setattr(EventGenerator, 'profiles', [profile_sn])
     return EventGenerator
 
 
@@ -160,6 +161,8 @@ def test_generator_profile_file_create(event_generator_class):
 
 
 def test_generator_create_events(event_generator):
+    """ Create Event returns a Generator that produces a dictionary
+    """
     event_generator._dtstamp = datetime(2019, 1, 1)
 
     expected = {
@@ -177,10 +180,69 @@ def test_generator_create_events(event_generator):
 
 
 def test_generator_create_events_resets_state(event_generator):
-    event_generator._state = []
+    """ When a state table is empty create_events should reset it
+    """
+    event_generator._state_table = []
 
-    m_create_state = Mock()
-    event_generator._create_state = m_create_state
+    m_reset_state_table = Mock()
+    event_generator._reset_state_table = m_reset_state_table
     list(event_generator.create_events())
 
-    m_create_state.assert_called_once()
+    m_reset_state_table.assert_called_once()
+
+
+def test_generator_can_accept_faker_instance(event_generator_class):
+    """ Use a Faker Instance if supplied to the Generator
+    """
+    event_generator = event_generator_class()
+    assert event_generator.fake.locales == ['en_US']
+
+    event_generator = event_generator_class(fake=faker.Faker(locale=['en_AU']))
+    assert event_generator.fake.locales == ['en_AU']
+
+
+def test_generator_profile_creation():
+    """ Profiles are created when the Event Generator is created
+    """
+    event_gen = EventGenerator(1)
+
+    attributes = [
+        'id',
+        'uuid',
+        'username',
+        'gender',
+        'first_name',
+        'last_name',
+        'prefix_name',
+        'suffix_name',
+        'birthdate',
+        'blood_group',
+        'email',
+        'employer',
+        'job',
+        'full_address1',
+        'building_number1',
+        'street_name1',
+        'street_suffix1',
+        'state1',
+        'postcode1',
+        'city1',
+        'phone1',
+        'full_address2',
+        'building_number2',
+        'street_name2',
+        'street_suffix2',
+        'state2',
+        'postcode2',
+        'city2',
+        'phone2',
+        'driver_license',
+        'license_plate',
+    ]
+
+    assert len(event_gen.profiles) == 1
+    assert isinstance(event_gen.profiles[0], SimpleNamespace)
+
+    # TODO Broken by the Mocking of EventGenerator
+    for attr in attributes:
+        assert hasattr(event_gen.profiles[0], attr)

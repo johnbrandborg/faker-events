@@ -9,7 +9,7 @@ import time
 import types
 import sys
 
-from faker import Faker
+import faker
 from .handlers import Stream
 
 __all__ = ['EventType', 'EventGenerator']
@@ -111,17 +111,19 @@ class EventGenerator():
 
     _dtstamp = None
     _first_event = ExampleEvent()
-    _state = []
+    _state_table = []
     profiles = []
 
     def __init__(self,
                  num_profiles: int = 10,
                  stream: Stream = None,
                  use_profile_file: bool = False,
-                 fake: Faker = None):
-        self.fake = fake
+                 fake: faker.Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
+
+        self.fake = fake if fake and \
+            isinstance(fake, faker.Faker) else faker.Faker()
 
         if use_profile_file:
             try:
@@ -146,13 +148,13 @@ class EventGenerator():
 
         total_count = 0
 
-        if self._state == []:
-            self._create_state()
+        if not self._state_table:
+            self._reset_state_table()
 
-        while self._state:
-            sindex = random.randint(0, len(self._state)-1)
-            pindex = self._state[sindex][0]
-            event = self._state[sindex][2]
+        while self._state_table:
+            sindex = random.randint(0, len(self._state_table)-1)
+            pindex = self._state_table[sindex][0]
+            event = self._state_table[sindex][2]
             selected_profile = self.profiles[pindex]
 
             event.event_time = self._dtstamp.isoformat('T') \
@@ -162,16 +164,9 @@ class EventGenerator():
             event.event_id += 1
             yield event(selected_profile)
 
-            try:
-                self._state[sindex][1] -= 1
-            except TypeError:
-                continue
-
-            if self._state[sindex][1] == 0 and event.next is None:
-                del self._state[sindex]
-            elif self._state[sindex][1] == 0:
-                self._state[sindex][1] = event.next.limit
-                self._state[sindex][2] = event.next
+            if isinstance(self._state_table[sindex][1], int):
+                self._state_table[sindex][1] -= 1
+                self._process_state_entry(sindex, event)
 
         print(f'Event limit reached.  {total_count} in total generated')
 
@@ -179,44 +174,44 @@ class EventGenerator():
         """
         Creates the fake profiles that will be used for event creation.
         """
-        fake = self.fake if self.fake else Faker()
         result = []
 
         for _ in range(self.num_profiles):
             gender = random.choice(['M', 'F'])
 
             if gender == 'F':
-                first_name = fake.first_name_female()
-                middle_name = fake.first_name_female()
-                prefix_name = fake.prefix_female()
-                suffix_name = fake.suffix_female()
+                first_name = self.fake.first_name_female()
+                middle_name = self.fake.first_name_female()
+                prefix_name = self.fake.prefix_female()
+                suffix_name = self.fake.suffix_female()
             else:
-                first_name = fake.first_name_male()
-                middle_name = fake.first_name_male()
-                prefix_name = fake.prefix_male()
-                suffix_name = fake.suffix_male()
+                first_name = self.fake.first_name_male()
+                middle_name = self.fake.first_name_male()
+                prefix_name = self.fake.prefix_male()
+                suffix_name = self.fake.suffix_male()
 
-            last_name = fake.last_name()
+            last_name = self.fake.last_name()
             address = '{{building_number}}|{{street_name}}|{{state_abbr}}' \
                       '|{{postcode}}|{{city}}'
-            address1 = fake.parse(address).split('|')
+            address1 = self.fake.parse(address).split('|')
             profile = {
-                'id': fake.unique.random_number(),
-                'uuid': fake.uuid4(),
-                'username': fake.user_name(),
+                'id': self.fake.unique.random_number(),
+                'uuid': self.fake.uuid4(),
+                'username': self.fake.user_name(),
                 'gender': gender,
                 'first_name': first_name,
                 'middle_name': middle_name,
                 'last_name': last_name,
                 'prefix_name': prefix_name,
                 'suffix_name': suffix_name,
-                'birthdate': fake.date_of_birth(minimum_age=18,
-                                                maximum_age=80).isoformat(),
+                'birthdate': self.fake.date_of_birth(minimum_age=18,
+                                                     maximum_age=80)
+                            .isoformat(),
                 'blood_group': (random.choice(["A", "B", "AB", "O"]) +
                                 random.choice(["+", "-"])),
-                'email': f'{first_name}.{last_name}@{fake.domain_name()}',
-                'employer': fake.company(),
-                'job': fake.job(),
+                'email': f'{first_name}.{last_name}@{self.fake.domain_name()}',
+                'employer': self.fake.company(),
+                'job': self.fake.job(),
                 'full_address1': ' '.join(address1),
                 'building_number1': address1[0],
                 'street_name1': address1[1].split(' ')[0],
@@ -224,7 +219,7 @@ class EventGenerator():
                 'state1': address1[2],
                 'postcode1': address1[3],
                 'city1': address1[4],
-                'phone1': fake.phone_number(),
+                'phone1': self.fake.phone_number(),
                 'full_address2': ' '.join(address1),
                 'building_number2': address1[0],
                 'street_name2': address1[1].split(' ')[0],
@@ -232,9 +227,9 @@ class EventGenerator():
                 'state2': address1[2],
                 'postcode2': address1[3],
                 'city2': address1[4],
-                'phone2': fake.phone_number(),
-                'driver_license': fake.bothify('?#####'),
-                'license_plate': fake.license_plate(),
+                'phone2': self.fake.phone_number(),
+                'driver_license': self.fake.bothify('?#####'),
+                'license_plate': self.fake.license_plate(),
             }
 
             result.append(types.SimpleNamespace(**profile))
@@ -254,7 +249,7 @@ class EventGenerator():
         else:
             raise TypeError("Events must be an EventType instance")
 
-        self._create_state()
+        self._reset_state_table()
 
     def live_stream(self, epm: int = 60, indent: int = None) -> str:
         """
@@ -295,6 +290,13 @@ class EventGenerator():
         except KeyboardInterrupt:
             print('\nStopping Event Batch', file=sys.stderr)
 
-    def _create_state(self):
-        self._state = [[index, self.first_event.limit, self.first_event]
-                       for index, _ in enumerate(self.profiles)]
+    def _reset_state_table(self):
+        self._state_table = [[index, self.first_event.limit, self.first_event]
+                             for index, _ in enumerate(self.profiles)]
+
+    def _process_state_entry(self, index, event):
+        if self._state_table[index][1] == 0 and event.next is None:
+            del self._state_table[index]
+        elif self._state_table[index][1] == 0:
+            self._state_table[index][1] = event.next.limit
+            self._state_table[index][2] = event.next
