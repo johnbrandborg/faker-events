@@ -1,7 +1,7 @@
 """ Events Tests
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from types import GeneratorType, SimpleNamespace
 from unittest.mock import Mock, mock_open, patch
@@ -15,13 +15,27 @@ from faker_events.events import (
     ExampleEvent
 )
 
-
 PROFILE_SAMPLE = {
     'id': 1,
     'user_id': 1,
     'first_name': 'John',
     'last_name': 'Smith',
 }
+
+
+class FooBarEvent(EventType):
+    """ Events used for testing
+    """
+    event = {'Foo': True, 'Bar': False}
+
+
+class CaptureStream():
+    """ Stream used for testing
+    """
+    captured = []
+
+    def send(self, message):
+        self.captured.append(message)
 
 
 @pytest.fixture
@@ -55,7 +69,8 @@ def event_generator_class(monkeypatch, profile_sn):
 
 @pytest.fixture
 def event_generator(event_generator_class):
-    event_generator = event_generator_class()
+    capture = CaptureStream()
+    event_generator = event_generator_class(stream=capture)
     event_generator.first_event = ExampleEvent(1)
     return event_generator
 
@@ -75,31 +90,31 @@ def profile_json():
 
 
 def test_event_returns_unprofiled(event):
-    """ Event Call only returns the event data
+    """ Event call only returns the event data
     """
     assert event() == {}
 
 
 def test_event_returns_profiles(event_profiled):
-    """ Event Call returns the profiled data
+    """ Event call returns the profiled data
     """
     assert event_profiled()['Profiled']
 
 
 def test_event_repr(event):
-    """ Repr format check
+    """ Event Repr format check
     """
     assert repr(event) == 'EventType(limit=None)'
 
 
 def test_event_next_get(event):
-    """ Method returns None if not set
+    """ Next method returns None if not set
     """
     assert event.next is None
 
 
 def test_event_next_set(event):
-    """ Method returns Event if set
+    """ Next method returns Event if set
     """
     next_event = EventType()
     event.next = next_event
@@ -107,11 +122,11 @@ def test_event_next_set(event):
     assert event.next == next_event
 
 
-def test_event_next_set_raises_typeerror(event):
+def test_event_next_set_type_check(event):
     """ Method requires EventType
     """
     with pytest.raises(TypeError):
-        event.next = 'String'
+        event.next = 'not an event'
 
 
 def test_event_profiled_notimplemented(event):
@@ -243,6 +258,76 @@ def test_generator_profile_creation():
     assert len(event_gen.profiles) == 1
     assert isinstance(event_gen.profiles[0], SimpleNamespace)
 
-    # TODO Broken by the Mocking of EventGenerator
     for attr in attributes:
         assert hasattr(event_gen.profiles[0], attr)
+
+
+def test_generator_first_event_get(event_generator):
+    """ First event method returns the EventType to be used initially
+    """
+    assert isinstance(event_generator.first_event, ExampleEvent)
+
+
+def test_generator_first_event_set(event_generator):
+    """ First event method sets the EventType to be used initially
+        Setting the first_event also resets the state table
+    """
+    m_reset_state_table = Mock()
+    event_generator._reset_state_table = m_reset_state_table
+    event_generator.first_event = FooBarEvent()
+
+    assert isinstance(event_generator._first_event, FooBarEvent)
+    m_reset_state_table.assert_called_once()
+
+
+def test_generator_first_event_get_type_check(event_generator):
+    """ First event method checks that the type is EventType
+    """
+    with pytest.raises(TypeError):
+        event_generator.first_event = 'not an EventType'
+
+
+def test_generator_live_stream(event_generator):
+    """ Live stream rns randomly timed event generation from now
+    """
+    event_generator.stream.captured = []
+    event_generator.live_stream()
+
+    dtstamp = datetime.now().isoformat()
+    expected_message = {
+        'type': 'example',
+        'event_time': dtstamp.split('T')[0],
+        'event_id': 1,
+        'user_id': 1,
+        'first_name': 'John',
+        'last_name': 'Smith'
+    }
+
+    assert len(event_generator.stream.captured) == 1
+    sent_message = json.loads(event_generator.stream.captured[0])
+    sent_message['event_time'] = sent_message['event_time'].split('T')[0]
+    assert sent_message == expected_message
+
+
+def test_generator_batch_stream(event_generator):
+    """ Batch stream randomly timed event generation from now
+    """
+    start = datetime(2019, 1, 1)
+    finish = start + timedelta(minutes=1)
+    event_generator.stream.captured = []
+    event_generator.batch(start, finish)
+
+    dtstamp = event_generator._dtstamp
+    expected_message = {
+        'type': "example",
+        'event_time': dtstamp.isoformat().split('T')[0],
+        'event_id': 1,
+        'user_id': 1,
+        "first_name": "John",
+        "last_name": "Smith"
+    }
+
+    assert len(event_generator.stream.captured) == 1
+    sent_message = json.loads(event_generator.stream.captured[0])
+    sent_message['event_time'] = sent_message['event_time'].split('T')[0]
+    assert sent_message == expected_message

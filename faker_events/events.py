@@ -38,14 +38,14 @@ class EventType():
     def __init__(self, limit: int = None):
         self.limit = limit
 
-    def __call__(self, profile=None):
+    def __call__(self, profile=None) -> dict:
         try:
             self.profiled(profile)
         except NotImplementedError:
             pass
         return self.event
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.__class__.__name__}(limit={self.limit})'
 
     @property
@@ -56,7 +56,7 @@ class EventType():
         return self._next_event
 
     @next.setter
-    def next(self, event):
+    def next(self, event) -> None:
         if isinstance(event, EventType):
             self._next_event = event
         else:
@@ -140,7 +140,7 @@ class EventGenerator():
         else:
             self.create_profiles()
 
-    def create_events(self):
+    def create_events(self) -> dict:
         """
         Selects a profile to be used, and will request the Event Type
         to process the data if available.
@@ -170,7 +170,7 @@ class EventGenerator():
 
         print(f'Event limit reached.  {total_count} in total generated')
 
-    def create_profiles(self):
+    def create_profiles(self) -> None:
         """
         Creates the fake profiles that will be used for event creation.
         """
@@ -236,14 +236,14 @@ class EventGenerator():
         self.profiles = result
 
     @property
-    def first_event(self):
+    def first_event(self) -> EventType:
         """
         View the first event, or use a statement to set the event.
         """
         return self._first_event
 
     @first_event.setter
-    def first_event(self, event: EventType):
+    def first_event(self, event: EventType) -> None:
         if isinstance(event, EventType):
             self._first_event = event
         else:
@@ -251,7 +251,7 @@ class EventGenerator():
 
         self._reset_state_table()
 
-    def live_stream(self, epm: int = 60, indent: int = None) -> str:
+    def live_stream(self, epm: int = 60, indent: int = None) -> None:
         """
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
@@ -270,7 +270,7 @@ class EventGenerator():
               start: datetime,
               finish: datetime,
               epm: int = 60,
-              indent: int = None) -> str:
+              indent: int = None) -> None:
         """
         Produces a batch of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
@@ -290,11 +290,11 @@ class EventGenerator():
         except KeyboardInterrupt:
             print('\nStopping Event Batch', file=sys.stderr)
 
-    def _reset_state_table(self):
+    def _reset_state_table(self) -> None:
         self._state_table = [[index, self.first_event.limit, self.first_event]
                              for index, _ in enumerate(self.profiles)]
 
-    def _process_state_entry(self, index, event):
+    def _process_state_entry(self, index: int, event: EventType) -> None:
         if self._state_table[index][1] == 0 and event.next is None:
             del self._state_table[index]
         elif self._state_table[index][1] == 0:
