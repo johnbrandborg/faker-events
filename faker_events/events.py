@@ -280,13 +280,11 @@ class EventGenerator():
 
         try:
             for event in self.create_events():
-                self.stream.send(json.dumps(event, indent=indent))
-                self._dtstamp += timedelta(seconds=random.random() * 60/epm)
-
                 if self._dtstamp >= finish:
                     print('Finish time reached', file=sys.stderr)
                     break
-
+                self.stream.send(json.dumps(event, indent=indent))
+                self._dtstamp += timedelta(seconds=random.random() * 60/epm)
         except KeyboardInterrupt:
             print('\nStopping Event Batch', file=sys.stderr)
 

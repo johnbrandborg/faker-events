@@ -23,10 +23,16 @@ PROFILE_SAMPLE = {
 }
 
 
-class FooBarEvent(EventType):
+class EventA(EventType):
     """ Events used for testing
     """
-    event = {'Foo': True, 'Bar': False}
+    event = {'name': 'a' }
+
+
+class EventB(EventType):
+    """ Events used for testing
+    """
+    event = {'name': 'b' }
 
 
 class CaptureStream():
@@ -274,9 +280,9 @@ def test_generator_first_event_set(event_generator):
     """
     m_reset_state_table = Mock()
     event_generator._reset_state_table = m_reset_state_table
-    event_generator.first_event = FooBarEvent()
+    event_generator.first_event = EventA()
 
-    assert isinstance(event_generator._first_event, FooBarEvent)
+    assert isinstance(event_generator._first_event, EventA)
     m_reset_state_table.assert_called_once()
 
 
@@ -331,3 +337,30 @@ def test_generator_batch_stream(event_generator):
     sent_message = json.loads(event_generator.stream.captured[0])
     sent_message['event_time'] = sent_message['event_time'].split('T')[0]
     assert sent_message == expected_message
+
+
+def test_generator_batch_completes(event_generator):
+    """ Stop when finish time is past
+    """
+    start = datetime(2019, 1, 1)
+    finish = start - timedelta(minutes=1)
+    event_generator.batch(start, finish)
+
+    assert not len(event_generator.stream.captured)
+
+
+def test_generator_changes_next_event(event_generator):
+    """ When the limit exceeds the state entry updates the event
+    """
+    eventa = EventA(limit=1)
+    eventb = EventB(limit=1)
+
+    eventa.next = eventb
+    event_generator.first_event = eventa
+
+    expect_events = [
+        {'name': 'a'},
+        {'name': 'b'}
+    ]
+
+    assert list(event_generator.create_events()) == expect_events
