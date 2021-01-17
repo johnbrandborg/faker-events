@@ -49,4 +49,3 @@ jobs:
           -Dsonar.sources=faker_events/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
-          -Dsonar.verbose=true
