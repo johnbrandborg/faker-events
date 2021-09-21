@@ -48,6 +48,18 @@ class EventType():
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(limit={self.limit})'
 
+    @staticmethod
+    def merge_dict(dict1: dict, dict2: dict) -> None:
+        """
+        Merges two dictionaries together, where values in the second dictionary
+        will be applied to the first dictionary.
+        """
+        for key, value in dict1.items():
+            if isinstance(value, dict) and key in dict2.keys():
+                EventType.merge_dict(dict1[key], dict2[key])
+            if not isinstance(value, dict) and key in dict2.keys():
+                dict1[key] = dict2[key]
+
     @property
     def next(self):
         """
@@ -56,11 +68,15 @@ class EventType():
         return self._next_event
 
     @next.setter
-    def next(self, event) -> None:
-        if isinstance(event, EventType):
-            self._next_event = event
+    def next(self, events) -> None:
+        if isinstance(events, EventType):
+            self._next_event = [events]
+        elif not isinstance(events, list):
+            raise TypeError("An EventType or list of EventTypes is required")
+        elif all((isinstance(event, EventType) for event in events)):
+            self._next_event = events
         else:
-            raise TypeError("Event must be an EventType")
+            raise TypeError("Events must be only EventType instances")
 
     def profiled(self, profile: dict) -> None:
         """
@@ -77,6 +93,7 @@ class ExampleEvent(EventType):
     """
     Example Event if no event is supplied to the Generator
     """
+
     event = {
         'type': 'example',
     }
@@ -118,8 +135,8 @@ class EventGenerator():
                  fake: faker.Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
+        self.first_events = ExampleEvent()
         self._dtstamp = None
-        self._first_event = ExampleEvent()
         self._state_table = []
 
         self.fake = fake if fake and \
@@ -152,9 +169,11 @@ class EventGenerator():
             self._reset_state_table()
 
         while self._state_table:
-            index = random.randint(0, len(self._state_table)-1)
-            event = self._state_table[index]['event']
-            selected_profile = self.profiles[index]
+            pindex = random.choice(self._state_table)['pindex']
+            eindex = random.randint(0, len(self._state_table[pindex]['events'])-1)
+            limit = self._state_table[pindex]['events'][eindex]['limit']
+            event = self._state_table[pindex]['events'][eindex]['event']
+            selected_profile = self.profiles[pindex]
 
             event.event_time = self._dtstamp.isoformat('T') \
                 if self._dtstamp else datetime.now().isoformat('T')
@@ -163,9 +182,9 @@ class EventGenerator():
             event.event_id += 1
             yield event(selected_profile)
 
-            if isinstance(self._state_table[index]['limit'], int):
-                self._state_table[index]['limit'] -= 1
-                self._process_state_entry(index, event)
+            if limit is not None:
+                self._state_table[pindex]['events'][eindex]['limit'] -= 1
+                self._process_state_entry(pindex, eindex)
 
         print(f'Event limit reached.  {total_count} in total generated', file=sys.stderr)
 
@@ -235,18 +254,22 @@ class EventGenerator():
         self.profiles = result
 
     @property
-    def first_event(self) -> EventType:
+    def first_events(self) -> list:
         """
         View the first event, or use a statement to set the event.
         """
-        return self._first_event
+        return self._first_events
 
-    @first_event.setter
-    def first_event(self, event: EventType) -> None:
-        if isinstance(event, EventType):
-            self._first_event = event
+    @first_events.setter
+    def first_events(self, events: list) -> None:
+        if isinstance(events, EventType):
+            self._first_events = [events]
+        elif not isinstance(events, list):
+            raise TypeError("An EventType or list of EventTypes is required")
+        elif all((isinstance(event, EventType) for event in events)):
+            self._first_events = events
         else:
-            raise TypeError("Events must be an EventType instance")
+            raise TypeError("Events must be only EventType instances")
 
         self._reset_state_table()
 
@@ -290,16 +313,32 @@ class EventGenerator():
     def _reset_state_table(self) -> None:
         self._state_table = [
             {
-                'index': index,
-                'limit': self.first_event.limit,
-                'event': self.first_event
+                'pindex': index,
+                'events': [
+                    {
+                        'limit': event.limit,
+                        'event': event
+                    } for event in self.first_events
+                ]
             }
             for index, _ in enumerate(self.profiles)
         ]
 
-    def _process_state_entry(self, index: int, event: EventType) -> None:
-        if self._state_table[index]['limit'] == 0 and event.next is None:
-            del self._state_table[index]
-        elif self._state_table[index]['limit'] == 0:
-            self._state_table[index]['limit'] = event.next.limit
-            self._state_table[index]['event'] = event.next
+    def _process_state_entry(self, sindex: int, eindex: int) -> None:
+        limit = self._state_table[sindex]['events'][eindex]['limit']
+        event = self._state_table[sindex]['events'][eindex]['event']
+
+        if limit >= 0 and event.next:
+            del self._state_table[sindex]['events'][eindex]
+            event_record = [
+                {
+                    'limit': next_event.limit,
+                    'event': next_event
+                } for next_event in event.next
+            ]
+            self._state_table[sindex]['events'].extend(event_record)
+        elif limit >= 0:
+            del self._state_table[sindex]['events'][eindex]
+
+        if not self._state_table[sindex]['events']:
+            del self._state_table[sindex]
