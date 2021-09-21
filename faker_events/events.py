@@ -30,13 +30,13 @@ class EventType():
             The base structure used for the Event
     """
 
-    _next_event = None
     event = {}
-    event_id = 0
-    event_time = None
 
     def __init__(self, limit: int = None):
         self.limit = limit
+        self.event_id = 0
+        self.event_time = None
+        self._next_event = None
 
     def __call__(self, profile=None) -> dict:
         try:
@@ -109,9 +109,6 @@ class EventGenerator():
             Customised Faker instance otherise one is created
     """
 
-    _dtstamp = None
-    _first_event = ExampleEvent()
-    _state_table = []
     profiles = []
 
     def __init__(self,
@@ -121,6 +118,9 @@ class EventGenerator():
                  fake: faker.Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
+        self._dtstamp = None
+        self._first_event = ExampleEvent()
+        self._state_table = []
 
         self.fake = fake if fake and \
             isinstance(fake, faker.Faker) else faker.Faker()
@@ -152,10 +152,9 @@ class EventGenerator():
             self._reset_state_table()
 
         while self._state_table:
-            sindex = random.randint(0, len(self._state_table)-1)
-            pindex = self._state_table[sindex][0]
-            event = self._state_table[sindex][2]
-            selected_profile = self.profiles[pindex]
+            index = random.randint(0, len(self._state_table)-1)
+            event = self._state_table[index]['event']
+            selected_profile = self.profiles[index]
 
             event.event_time = self._dtstamp.isoformat('T') \
                 if self._dtstamp else datetime.now().isoformat('T')
@@ -164,11 +163,11 @@ class EventGenerator():
             event.event_id += 1
             yield event(selected_profile)
 
-            if isinstance(self._state_table[sindex][1], int):
-                self._state_table[sindex][1] -= 1
-                self._process_state_entry(sindex, event)
+            if isinstance(self._state_table[index]['limit'], int):
+                self._state_table[index]['limit'] -= 1
+                self._process_state_entry(index, event)
 
-        print(f'Event limit reached.  {total_count} in total generated')
+        print(f'Event limit reached.  {total_count} in total generated', file=sys.stderr)
 
     def create_profiles(self) -> None:
         """
@@ -177,9 +176,9 @@ class EventGenerator():
         result = []
 
         for _ in range(self.num_profiles):
-            gender = random.choice(['M', 'F'])
+            gender = random.choice(['male', 'female'])
 
-            if gender == 'F':
+            if gender == 'female':
                 first_name = self.fake.first_name_female()
                 middle_name = self.fake.first_name_female()
                 prefix_name = self.fake.prefix_female()
@@ -289,12 +288,18 @@ class EventGenerator():
             print('\nStopping Event Batch', file=sys.stderr)
 
     def _reset_state_table(self) -> None:
-        self._state_table = [[index, self.first_event.limit, self.first_event]
-                             for index, _ in enumerate(self.profiles)]
+        self._state_table = [
+            {
+                'index': index,
+                'limit': self.first_event.limit,
+                'event': self.first_event
+            }
+            for index, _ in enumerate(self.profiles)
+        ]
 
     def _process_state_entry(self, index: int, event: EventType) -> None:
-        if self._state_table[index][1] == 0 and event.next is None:
+        if self._state_table[index]['limit'] == 0 and event.next is None:
             del self._state_table[index]
-        elif self._state_table[index][1] == 0:
-            self._state_table[index][1] = event.next.limit
-            self._state_table[index][2] = event.next
+        elif self._state_table[index]['limit'] == 0:
+            self._state_table[index]['limit'] = event.next.limit
+            self._state_table[index]['event'] = event.next
