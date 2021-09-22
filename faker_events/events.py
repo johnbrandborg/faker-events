@@ -12,13 +12,14 @@ from types import SimpleNamespace
 from faker import Faker
 from .handlers import Stream
 
-__all__ = ['EventType', 'EventGenerator']
+__all__ = ['Event', 'EventGenerator']
 
 
 example_event = {
     'event_time': '',
     'type': 'example',
     'event_id': '',
+    'user_id': '',
     'first_name': '',
     'last_name': ''
 }
@@ -30,14 +31,14 @@ def profile_example(self, profile: dict) -> dict:
         'event_id': self.event_id,
         'user_id': profile.id,
         'first_name': profile.first_name,
-        'last_name': profile.last_name,
-        'test': {'t1': '3'}
+        'last_name': profile.last_name
     }
 
 
-class EventType():
+class Event():
     """
-    An Event Types that will produced a defined number of events.
+    An Event Types that will produced a defined number of events. The event
+    maybe static or dynamic by suppling a function to modify the event.
 
     Parameters
     ----------
@@ -74,13 +75,15 @@ class EventType():
         return self()
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.event})'
+        return f'{self.__class__.__name__}({self.event}, {self.profiler}, limit={self.limit})'
 
     def __lshift__(self, other):
         other.next = self
+        return self
 
     def __rshift__(self, other):
         self.next = other
+        return other
 
     @property
     def next(self):
@@ -91,14 +94,14 @@ class EventType():
 
     @next.setter
     def next(self, events) -> None:
-        if isinstance(events, EventType):
+        if isinstance(events, Event):
             self._next_event = [events]
         elif not isinstance(events, list):
-            raise TypeError("An EventType or list of EventTypes is required")
-        elif all((isinstance(event, EventType) for event in events)):
+            raise TypeError("An Event or list of Event Types is required")
+        elif all((isinstance(event, Event) for event in events)):
             self._next_event = events
         else:
-            raise TypeError("Events must be only EventType instances")
+            raise TypeError("Events must be only Event Type instances")
 
     @staticmethod
     def _update_values(dict1: dict, dict2: dict) -> None:
@@ -108,7 +111,7 @@ class EventType():
         """
         for key, value in dict1.items():
             if isinstance(value, dict) and key in dict2.keys():
-                EventType._update_values(dict1[key], dict2[key])
+                Event._update_values(dict1[key], dict2[key])
             if not isinstance(value, dict) and key in dict2.keys():
                 dict1[key] = dict2[key]
 
@@ -139,24 +142,25 @@ class EventGenerator():
                  fake: Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
-        self.first_events = EventType(example_event, profile_example, 1)
+        self.first_events = Event(example_event, profile_example, 1)
         self._dtstamp = None
         self._state_table = []
         self._total_count = 0
+        self.profile_filename = 'profiles.json'
 
         self.fake = fake if fake and \
             isinstance(fake, Faker) else Faker()
 
         if use_profile_file:
             try:
-                with open('profiles.json') as profiles_file:
+                with open(self.profile_filename) as profiles_file:
                     profiles_dicts = json.loads(profiles_file.read())
                     self.profiles = [SimpleNamespace(**profiles)
                                      for profiles in profiles_dicts]
             except FileNotFoundError:
                 self.create_profiles()
 
-                with open('profiles.json', 'w') as profiles_file:
+                with open(self.profile_filename, 'w') as profiles_file:
                     profiles_dicts = [vars(item) for item in self.profiles]
                     profiles_file.write(json.dumps(profiles_dicts))
         else:
@@ -219,7 +223,7 @@ class EventGenerator():
                       '|{{postcode}}|{{city}}'
             address1 = self.fake.parse(address).split('|')
             profile = {
-                'id': self.fake.unique.random_number(),
+                'id': str(self.fake.unique.random_number()),
                 'uuid': self.fake.uuid4(),
                 'username': self.fake.user_name(),
                 'gender': gender,
@@ -268,14 +272,14 @@ class EventGenerator():
 
     @first_events.setter
     def first_events(self, events: list) -> None:
-        if isinstance(events, EventType):
+        if isinstance(events, Event):
             self._first_events = [events]
         elif not isinstance(events, list):
-            raise TypeError("An EventType or list of EventTypes is required")
-        elif all((isinstance(event, EventType) for event in events)):
+            raise TypeError("An Event or list of EventTypes is required")
+        elif all((isinstance(event, Event) for event in events)):
             self._first_events = events
         else:
-            raise TypeError("Events must be only EventType instances")
+            raise TypeError("Events must be only Event Type instances")
 
         self._reset_state_table()
 

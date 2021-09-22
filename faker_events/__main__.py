@@ -4,14 +4,14 @@ Main module for Faker-Events
 Runs the Example EventType
 """
 
-import faker_events
+from faker_events import EventGenerator
 
 
 def main():
     """
     Main Function
     """
-    event_generator = faker_events.EventGenerator()
+    event_generator = EventGenerator()
     event_generator.live_stream()
 
 
