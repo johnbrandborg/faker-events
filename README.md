@@ -8,7 +8,8 @@ Generates Events with formatted fake data for streams. The intention is for
 
 ## Usage
 Faker Events is a package that doesn't come with a CLI.  This is in part
-due to the Events you create being written in Python as objects.
+due to the Events you create being written in Python as Dictionaries, and
+processed using a function referred to as the profiler.
 
 The Faker package is utilised to generate the data on the profiles.
 Understanding how Faker works is recommended and you can find the documentation
@@ -33,8 +34,7 @@ pip install faker-events[kinesis]
 
 ### Starting a Stream
 Create an Event Generator and start using Live Stream. By default only 10
-profiles are created.  Giving large numbers can take sometime to build so
-becareful.
+profiles are created.  Giving large numbers can take sometime to build.
 
 Set the "Events Per Minute" on the live_stream method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
@@ -208,7 +208,12 @@ a = Event({'Name': 'A'}, limit=1)
 b = Event({'Name': 'B'}, limit=2)
 c = Event({'Name': 'C'}, limit=1)
 
-eg.events = a >> b >> c
+eg.events = a
+a.next = b
+b.next = c
+
+# Short form:
+# eg.events = a >> b >> c
 
 eg.live_stream()
 ```
