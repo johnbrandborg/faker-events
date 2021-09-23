@@ -54,10 +54,10 @@ class Event():
     """
 
     def __init__(self,
-                 event: dict,
+                 data: dict,
                  profiler: callable = None,
                  limit: int = None):
-        self.event = event
+        self.data = data
         self.profiler = profiler
         self.limit = limit
         self.event_id = 0
@@ -68,11 +68,11 @@ class Event():
         if callable(self.profiler):
             returned = self.profiler(self, profile)
             if returned:
-                self._update_values(self.event, returned)
-        return self.event
+                self._update_values(self.data, returned)
+        return self.data
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.event}, {self.profiler}, limit={self.limit})'
+        return f'{self.__class__.__name__}({self.data}, {self.profiler}, limit={self.limit})'
 
     def __lshift__(self, other):
         other.next = self

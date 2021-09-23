@@ -129,7 +129,7 @@ def test_example_event_update(profile_sample):
     example = Event(example_event, profile_example)
     example(profile_sample)
 
-    assert example.event == {
+    assert example.data == {
         'type': 'example',
         'event_time': None,
         'event_id': 0,

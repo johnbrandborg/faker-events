@@ -113,7 +113,8 @@ eg.batch(start, finish, epm=10)
 ### Event Data Points
 
 The Event Type has some basic data points about the event that can be used
-within the profiled method. (Access the Attribute using self)
+within the profiled method. (Access the Attribute using the event within the
+profiler)
 
 * event_id - The id of the particular event
 * event_time - The time the event occured (ISO Format)
@@ -122,7 +123,7 @@ within the profiled method. (Access the Attribute using self)
 
 When you create the Event Generator, the profiles you will use in the events
 are created with a number of data points. Below is a list of attributes that
-can be used on the 'profile' object within the Event Profiler function.
+can be used on the 'profile' within the Event Profiler function.
 
 * id
 * uuid
@@ -164,11 +165,11 @@ and you can then use the 'create_events' method which will return a generator,
 or us the 'live_stream' or 'batch' methods that will handle the generator.
 
 If you want event values to be dynamic, create a profiler functions. The
-function should take two arguments; self and profile.  These carry the attributes
+function should take two arguments; event and profile.  These carry the attributes
 listed above into the function for updating event values, or even creating new
 key value pairs.
 
-Update the event yourself by using 'self.event', which contains the dictionary
+Update the event yourself by using 'event.data', which contains the dictionary
 passed into the Event Class.  The other option is to return a dictionary with
 the key value pairs you want to update.  The Event instance will handle updating
 the values.
@@ -190,7 +191,7 @@ event = {
     'Profiled': '',
 }
 
-def profiler(self, profile):
+def profiler(event, profile):
     return {
         'Always': fake.boolean(),
         'Profiled': profile.email,
@@ -252,19 +253,19 @@ eg = EventGenerator(num_profiles=1)
 
 event_a = {'Name': 'A', 'LastEvent': 'none'}
 
-def profiler_a(self, profile):
+def profiler_a(event, profile):
     profile.LastEvent = 'EventA'
 
 event_b = {'Name': 'B', 'LastEvent': 'none'}
 
-def profiler_b(self, profile):
-    self.event['LastEvent'] = profile.LastEvent
+def profiler_b(event, profile):
+    event.data['LastEvent'] = profile.LastEvent
     profile.LastEvent = 'EventB'
 
 event_c = {'Name': 'C', 'LastEvent': 'none'}
 
-def profiler_c(self, profile):
-    self.event['LastEvent'] = profile.LastEvent
+def profiler_c(event, profile):
+    event.data['LastEvent'] = profile.LastEvent
 
 a = Event(event_a, profiler_a, 1)
 b = Event(event_b, profiler_b, 1)
