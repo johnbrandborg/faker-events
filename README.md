@@ -8,7 +8,8 @@ Generates Events with formatted fake data for streams. The intention is for
 
 ## Usage
 Faker Events is a package that doesn't come with a CLI.  This is in part
-due to the Events you create being written in Python as objects.
+due to the Events you create being written in Python as Dictionaries, and
+processed using a function referred to as the profiler.
 
 The Faker package is utilised to generate the data on the profiles.
 Understanding how Faker works is recommended and you can find the documentation
@@ -33,8 +34,7 @@ pip install faker-events[kinesis]
 
 ### Starting a Stream
 Create an Event Generator and start using Live Stream. By default only 10
-profiles are created.  Giving large numbers can take sometime to build so
-becareful.
+profiles are created.  Giving large numbers can take sometime to build.
 
 Set the "Events Per Minute" on the live_stream method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
@@ -50,11 +50,11 @@ eg.live_stream(epm=120)
 
 Output
 ```json
-{"type": "example", "event_time": "2021-01-14T19:10:02.678866", "event_id": 1, "user_id": 681, "first_name": "John", "last_name": "Harris"}
-{"type": "example", "event_time": "2021-01-14T19:10:03.468144", "event_id": 2, "user_id": 7, "first_name": "Robert", "last_name": "Lane"}
-{"type": "example", "event_time": "2021-01-14T19:10:04.270969", "event_id": 3, "user_id": 238226092, "first_name": "Michelle", "last_name": "Clayton"}
-{"type": "example", "event_time": "2021-01-14T19:10:04.888072", "event_id": 4, "user_id": 7, "first_name": "Robert", "last_name": "Lane"}
-{"type": "example", "event_time": "2021-01-14T19:10:05.446477", "event_id": 5, "user_id": 573872, "first_name": "Andrew", "last_name": "Oconnor"}
+{"type": "example", "event_time": "2021-01-14T19:10:02.678866", "event_id": 1, "first_name": "John", "last_name": "Harris"}
+{"type": "example", "event_time": "2021-01-14T19:10:03.468144", "event_id": 2, "first_name": "Robert", "last_name": "Lane"}
+{"type": "example", "event_time": "2021-01-14T19:10:04.270969", "event_id": 3, "first_name": "Michelle", "last_name": "Clayton"}
+{"type": "example", "event_time": "2021-01-14T19:10:04.888072", "event_id": 4, "first_name": "Robert", "last_name": "Lane"}
+{"type": "example", "event_time": "2021-01-14T19:10:05.446477", "event_id": 5, "first_name": "Andrew", "last_name": "Oconnor"}
 ^C
 Stopping Event Stream
 ```
@@ -113,7 +113,8 @@ eg.batch(start, finish, epm=10)
 ### Event Data Points
 
 The Event Type has some basic data points about the event that can be used
-within the profiled method. (Access the Attribute using self)
+within the profiled method. (Access the Attribute using the event within the
+profiler)
 
 * event_id - The id of the particular event
 * event_time - The time the event occured (ISO Format)
@@ -122,7 +123,7 @@ within the profiled method. (Access the Attribute using self)
 
 When you create the Event Generator, the profiles you will use in the events
 are created with a number of data points. Below is a list of attributes that
-can be used on the 'profile' object within the EventType Profiled method.
+can be used on the 'profile' within the Event Profiler function.
 
 * id
 * uuid
@@ -156,38 +157,48 @@ can be used on the 'profile' object within the EventType Profiled method.
 * driver_license
 * license_plate
 
-## Creating a Custom Record
-Create an Event Type that has an 'event' dictionary.  If you want values to be
-processed for each event, create a function called 'profiled', and thats takes
-a dict and returns an updated dict.
+## Profiling Events
+
+Creating an Event is as easy as just creating a dictionary that is passed into
+the Event Class.  The Event Instance is then just set on the Event Generator,
+and you can then use the 'create_events' method which will return a generator,
+or us the 'live_stream' or 'batch' methods that will handle the generator.
+
+If you want event values to be dynamic, create a profiler functions. The
+function should take two arguments; event and profile.  These carry the attributes
+listed above into the function for updating event values, or even creating new
+key value pairs.
+
+Update the event yourself by using 'event.data', which contains the dictionary
+passed into the Event Class.  The other option is to return a dictionary with
+the key value pairs you want to update.  The Event instance will handle updating
+the values.
 
 The profile is a randomly selected profile from the profiles created by the
 Event Generator.  You can use details from the profile to build our events
 that simulate customers, or entities.
 
 ```python
-import faker
-import faker_events
+from faker import Faker
+from faker_events import Event, EventGenerator
 
-fake = faker.Faker()
+fake = Faker()
 
-class NewEvent(faker_events.EventType):
-    event = {
-        'Fixed': 'Doesnt Change',
-        'Once': fake.color(),
-        'Always': '',
-        'Profiled': '',
+event = {
+    'Fixed': 'Doesnt Change',
+    'Once': fake.color(),
+    'Always': '',
+    'Profiled': '',
+}
+
+def profiler(event, profile):
+    return {
+        'Always': fake.boolean(),
+        'Profiled': profile.email,
     }
 
-    def profiled(self, profile):
-        new_details = {
-            'Always': fake.boolean(),
-            'Profiled': profile.email,
-        }
-        self.event.update(new_details)
-
-eg = faker_events.EventGenerator(num_profiles=2)
-eg.first_event = NewEvent()
+eg = EventGenerator(num_profiles=2)
+eg.events = Event(event, profiler)
 eg.live_stream()
 ```
 
@@ -197,29 +208,25 @@ You can sequence the events by setting the next event to occur, and occurence
 on how many times it will happen.  If no limit is set, the next Event Type will
 never be used.
 
+Either the 'next' attribute can be set with a statement, or the bitwise operator
+can be use to set the next event.
 
 ```python
-import faker_events
+from faker_events import Event, EventGenerator
 
-eg = faker_events.EventGenerator(num_profiles=1)
+eg = EventGenerator(num_profiles=1)
 
-class EventA(faker_events.EventType):
-    event = {'Name': 'A'}
+a = Event({'Name': 'A'}, limit=1)
+b = Event({'Name': 'B'}, limit=2)
+c = Event({'Name': 'C'}, limit=1)
 
-class EventB(faker_events.EventType):
-    event = {'Name': 'B'}
-
-class EventC(faker_events.EventType):
-    event = {'Name': 'C'}
-
-a = EventA(1)
-b = EventB(2)
-c = EventC(1)
-
+eg.events = a
 a.next = b
 b.next = c
 
-eg.first_event = a
+# Short form:
+# eg.events = a >> b >> c
+
 eg.live_stream()
 ```
 
@@ -232,45 +239,40 @@ eg.live_stream()
 Event limited reached.  4 in total generated
 ```
 
-### Using the Profile for Event State
+### Persistant State
 
 If you need to update the details of the profile, or add persistant data from
-the events you can do so within the Profiled method of the EventType instance.
+the events you can do so within the Profiled method of the Event instance.
 When using sequenced events, the profile can be used to retrieve the data from
 previous events.
 
 ```python
-import faker_events
+from faker_events import EventGenerator, Event
 
-eg = faker_events.EventGenerator(num_profiles=1)
+eg = EventGenerator(num_profiles=1)
 
-class EventA(faker_events.EventType):
-    event = {'Name': 'A', 'LastEvent': 'none'}
+event_a = {'Name': 'A', 'LastEvent': 'none'}
 
-    def profiled(self, profile):
-        profile.LastEvent = self.__class__.__name__
+def profiler_a(event, profile):
+    profile.LastEvent = 'EventA'
 
-class EventB(faker_events.EventType):
-    event = {'Name': 'B', 'LastEvent': 'none'}
+event_b = {'Name': 'B', 'LastEvent': 'none'}
 
-    def profiled(self, profile):
-        self.event['LastEvent'] = profile.LastEvent
-        profile.LastEvent = self.__class__.__name__
+def profiler_b(event, profile):
+    event.data['LastEvent'] = profile.LastEvent
+    profile.LastEvent = 'EventB'
 
-class EventC(faker_events.EventType):
-    event = {'Name': 'C', 'LastEvent': 'none'}
+event_c = {'Name': 'C', 'LastEvent': 'none'}
 
-    def profiled(self, profile):
-        self.event['LastEvent'] = profile.LastEvent
+def profiler_c(event, profile):
+    event.data['LastEvent'] = profile.LastEvent
 
-a = EventA(1)
-b = EventB(1)
-c = EventC(1)
+a = Event(event_a, profiler_a, 1)
+b = Event(event_b, profiler_b, 1)
+c = Event(event_c, profiler_c, 1)
 
-a.next = b
-b.next = c
+eg.events = a >> b >> c
 
-eg.first_event = a
 eg.live_stream()
 ```
 
@@ -280,6 +282,43 @@ Output
 {"Name": "B", "LastEvent": "EventA"}
 {"Name": "C", "LastEvent": "EventB"}
 Event limit reached.  3 in total generated
+```
+
+
+### Multiple Event Flows
+
+By grouping the events in lists, the Event Generator is able to work through
+multiple Event Flows for each profile created, creating complex event streams.
+
+```python
+from faker_events import Event, EventGenerator
+
+eg = EventGenerator(1)
+
+flow_a1 = Event({"Name": "A1"}, limit=1)
+flow_aa1 = Event({"Name": "AA1"}, limit=1)
+flow_aa2 = Event({"Name": "AA2"}, limit=1)
+
+flow_b1 = Event({"Name": "B1"}, limit=1)
+flow_bb1 = Event({"Name": "BB1"}, limit=1)
+flow_bb2 = Event({"Name": "BB2"}, limit=1)
+
+eg.events = [flow_a1, flow_b1]
+flow_a1 >> [flow_aa1, flow_aa2]
+flow_b1 >> [flow_bb1, flow_bb2]
+
+eg.live_stream()
+```
+
+Output
+```
+{"Name": "B1"}
+{"Name": "BB2"}
+{"Name": "A1"}
+{"Name": "AA1"}
+{"Name": "AA2"}
+{"Name": "BB1"}
+Event limit reached.  6 in total generated
 ```
 
 ## License

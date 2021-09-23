@@ -6,33 +6,22 @@ import json
 from types import GeneratorType, SimpleNamespace
 from unittest.mock import Mock, mock_open, patch
 
-import faker
+from faker import Faker
 import pytest
 
 from faker_events.events import (
+    Event,
     EventGenerator,
-    EventType,
-    ExampleEvent
+    example_event,
+    profile_example
 )
 
+
 PROFILE_SAMPLE = {
-    'id': 1,
-    'user_id': 1,
+    'id': '1',
     'first_name': 'John',
     'last_name': 'Smith',
 }
-
-
-class EventA(EventType):
-    """ Events used for testing
-    """
-    event = {'name': 'a' }
-
-
-class EventB(EventType):
-    """ Events used for testing
-    """
-    event = {'name': 'b' }
 
 
 class CaptureStream():
@@ -48,28 +37,27 @@ class CaptureStream():
 def event():
     """ Returns an Event with no profiled method
     """
-    return EventType()
+    event = {}
+    return Event(event)
 
 
 @pytest.fixture
 def event_profiled():
     """ Returns an Event with a profiled method
     """
-    class Event(EventType):
-        """ SubClass
-        """
-        def profiled(self, _):
-            """ Implement Method
-            """
-            self.event['Profiled'] = True
-    return Event()
+    event = {'Profiled': False}
+
+    def profiler(self, profile):
+        return {'Profiled': True}
+
+    return Event(event, profiler)
 
 
 @pytest.fixture
-def event_generator_class(monkeypatch, profile_sn):
+def event_generator_class(monkeypatch, profile_sample):
     mcreate_profiles = Mock()
     monkeypatch.setattr(EventGenerator, 'create_profiles', mcreate_profiles)
-    monkeypatch.setattr(EventGenerator, 'profiles', [profile_sn])
+    monkeypatch.setattr(EventGenerator, 'profiles', [profile_sample])
     return EventGenerator
 
 
@@ -77,12 +65,12 @@ def event_generator_class(monkeypatch, profile_sn):
 def event_generator(event_generator_class):
     capture = CaptureStream()
     event_generator = event_generator_class(stream=capture)
-    event_generator.first_event = ExampleEvent(1)
+    event_generator.events = Event(example_event, profile_example, limit=1)
     return event_generator
 
 
 @pytest.fixture
-def profile_sn():
+def profile_sample():
     """ Returns a Profile to be used on Events
     """
     return SimpleNamespace(**PROFILE_SAMPLE)
@@ -110,7 +98,7 @@ def test_event_returns_profiles(event_profiled):
 def test_event_repr(event):
     """ Event Repr format check
     """
-    assert repr(event) == 'EventType(limit=None)'
+    assert repr(event) == 'Event({}, None, limit=None)'
 
 
 def test_event_next_get(event):
@@ -122,43 +110,36 @@ def test_event_next_get(event):
 def test_event_next_set(event):
     """ Next method returns Event if set
     """
-    next_event = EventType()
-    event.next = next_event
+    next_event = Event({})
+    event >> next_event
 
-    assert event.next == next_event
+    assert event.next == [next_event]
 
 
 def test_event_next_set_type_check(event):
-    """ Method requires EventType
+    """ Method requires Event Type
     """
     with pytest.raises(TypeError):
         event.next = 'not an event'
 
 
-def test_event_profiled_notimplemented(event):
-    """ Unprofiled Event raises NotImplementedError
-    """
-    with pytest.raises(NotImplementedError):
-        event.profiled(None)
-
-
-def test_example_event_update(profile_sn):
+def test_example_event_update(profile_sample):
     """ ExampleEvent Output
     """
-    example_event = ExampleEvent()
-    example_event.profiled(profile_sn)
+    example = Event(example_event, profile_example)
+    example(profile_sample)
 
-    assert example_event.event == {
+    assert example.data == {
         'type': 'example',
         'event_time': None,
         'event_id': 0,
-        'user_id': 1,
+        'user_id': '1',
         'first_name': 'John',
         'last_name': 'Smith'
     }
 
 
-def test_generator_profile_file_read(profile_json, profile_sn):
+def test_generator_profile_file_read(profile_json, profile_sample):
     """ Use a file for profile data if found
     """
     mocked_file = mock_open(read_data=profile_json)
@@ -166,7 +147,7 @@ def test_generator_profile_file_read(profile_json, profile_sn):
         event_generator = EventGenerator(1, None, True)
 
     mopen.assert_called_once_with('profiles.json')
-    assert event_generator.profiles == [profile_sn]
+    assert event_generator.profiles == [profile_sample]
 
 
 def test_generator_profile_file_create(event_generator_class):
@@ -192,7 +173,7 @@ def test_generator_create_events(event_generator):
         'first_name': 'John',
         'last_name': 'Smith',
         'type': 'example',
-        'user_id': 1
+        'user_id': '1'
     }
     event_gen = event_generator.create_events()
 
@@ -218,7 +199,7 @@ def test_generator_can_accept_faker_instance(event_generator_class):
     event_generator = event_generator_class()
     assert event_generator.fake.locales == ['en_US']
 
-    event_generator = event_generator_class(fake=faker.Faker(locale=['en_AU']))
+    event_generator = event_generator_class(fake=Faker(locale=['en_AU']))
     assert event_generator.fake.locales == ['en_AU']
 
 
@@ -268,29 +249,29 @@ def test_generator_profile_creation():
         assert hasattr(event_gen.profiles[0], attr)
 
 
-def test_generator_first_event_get(event_generator):
-    """ First event method returns the EventType to be used initially
+def test_generator_events_get(event_generator):
+    """ First event method returns the Event to be used initially
     """
-    assert isinstance(event_generator.first_event, ExampleEvent)
+    assert isinstance(event_generator.events[0], Event)
 
 
-def test_generator_first_event_set(event_generator):
-    """ First event method sets the EventType to be used initially
-        Setting the first_event also resets the state table
+def test_generator_events_set(event_generator):
+    """ First event method sets the Event to be used initially
+        Setting the events also resets the state table
     """
     m_reset_state_table = Mock()
     event_generator._reset_state_table = m_reset_state_table
-    event_generator.first_event = EventA()
+    event_generator.events = Event({})
 
-    assert isinstance(event_generator._first_event, EventA)
+    assert isinstance(event_generator._events[0], Event)
     m_reset_state_table.assert_called_once()
 
 
-def test_generator_first_event_get_type_check(event_generator):
-    """ First event method checks that the type is EventType
+def test_generator_events_get_type_check(event_generator):
+    """ First event method checks that the type is Event
     """
     with pytest.raises(TypeError):
-        event_generator.first_event = 'not an EventType'
+        event_generator.events = 'not an Event Type'
 
 
 def test_generator_live_stream(event_generator):
@@ -304,7 +285,7 @@ def test_generator_live_stream(event_generator):
         'type': 'example',
         'event_time': dtstamp.split('T')[0],
         'event_id': 1,
-        'user_id': 1,
+        'user_id': '1',
         'first_name': 'John',
         'last_name': 'Smith'
     }
@@ -328,7 +309,7 @@ def test_generator_batch_stream(event_generator):
         'type': "example",
         'event_time': dtstamp.isoformat().split('T')[0],
         'event_id': 1,
-        'user_id': 1,
+        'user_id': '1',
         "first_name": "John",
         "last_name": "Smith"
     }
@@ -346,21 +327,15 @@ def test_generator_batch_completes(event_generator):
     finish = start - timedelta(minutes=1)
     event_generator.batch(start, finish)
 
-    assert not len(event_generator.stream.captured)
+    assert len(event_generator.stream.captured) == 0
 
 
 def test_generator_changes_next_event(event_generator):
     """ When the limit exceeds the state entry updates the event
     """
-    eventa = EventA(limit=1)
-    eventb = EventB(limit=1)
-
-    eventa.next = eventb
-    event_generator.first_event = eventa
-
-    expect_events = [
-        {'name': 'a'},
-        {'name': 'b'}
-    ]
+    eventa = Event({'name': 'a'}, limit=1)
+    eventb = Event({'name': 'b'}, limit=1)
+    event_generator.events = eventa >> eventb
+    expect_events = [{'name': 'a'}, {'name': 'b'}]
 
     assert list(event_generator.create_events()) == expect_events
