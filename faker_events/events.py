@@ -62,7 +62,7 @@ class Event():
         self.limit = limit
         self.event_id = 0
         self.event_time = None
-        self._next_event = None
+        self._next_events = None
 
     def __call__(self, profile=None) -> dict:
         if callable(self.profiler):
@@ -71,35 +71,34 @@ class Event():
                 self._update_values(self.event, returned)
         return self.event
 
-    def __str__(self):
-        return self()
-
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.event}, {self.profiler}, limit={self.limit})'
 
     def __lshift__(self, other):
         other.next = self
-        return self
+        return other
 
     def __rshift__(self, other):
         self.next = other
-        return other
+        return self
 
     @property
     def next(self):
         """
         View the next event, or use a statement to set the event.
         """
-        return self._next_event
+        return self._next_events
 
     @next.setter
     def next(self, events) -> None:
-        if isinstance(events, Event):
-            self._next_event = [events]
+        if events is None:
+            self._next_events = None
+        elif isinstance(events, Event):
+            self._next_events = [events]
         elif not isinstance(events, list):
-            raise TypeError("An Event or list of Event Types is required")
+            raise TypeError("An Event or list of EventTypes is required")
         elif all((isinstance(event, Event) for event in events)):
-            self._next_event = events
+            self._next_events = events
         else:
             raise TypeError("Events must be only Event Type instances")
 
@@ -142,7 +141,7 @@ class EventGenerator():
                  fake: Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
-        self.first_events = Event(example_event, profile_example, 1)
+        self.events = Event(example_event, profile_example, 1)
         self._dtstamp = None
         self._state_table = []
         self._total_count = 0
@@ -264,20 +263,18 @@ class EventGenerator():
         self.profiles = result
 
     @property
-    def first_events(self) -> list:
+    def events(self) -> list:
         """
         View the first event, or use a statement to set the event.
         """
-        return self._first_events
+        return self._events
 
-    @first_events.setter
-    def first_events(self, events: list) -> None:
+    @events.setter
+    def events(self, events: list) -> None:
         if isinstance(events, Event):
-            self._first_events = [events]
-        elif not isinstance(events, list):
-            raise TypeError("An Event or list of EventTypes is required")
+            self._events = [events]
         elif all((isinstance(event, Event) for event in events)):
-            self._first_events = events
+            self._events = events
         else:
             raise TypeError("Events must be only Event Type instances")
 
@@ -331,11 +328,12 @@ class EventGenerator():
                     {
                         'remain': event.limit,
                         'event': event
-                    } for event in self.first_events
+                    } for event in self.events
                 ]
             }
             for index, _ in enumerate(self.profiles)
         ]
+        self._total_count = 0
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
         remain = self._state_table[sindex]['events'][eindex]['remain']

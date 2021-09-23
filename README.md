@@ -156,7 +156,7 @@ can be used on the 'profile' object within the Event Profiler function.
 * driver_license
 * license_plate
 
-## Creating a Custom Record
+## Profiling Events
 
 Create an Event Type that has an 'event' dictionary.  If you want values to be
 processed for each event, create a function called 'profiled', and thats takes
@@ -186,7 +186,7 @@ def profiler(self, profile):
     }
 
 eg = EventGenerator(num_profiles=2)
-eg.first_event = Event(event, profiler)
+eg.events = Event(event, profiler)
 eg.live_stream()
 ```
 
@@ -195,6 +195,9 @@ eg.live_stream()
 You can sequence the events by setting the next event to occur, and occurence
 on how many times it will happen.  If no limit is set, the next Event Type will
 never be used.
+
+Either the 'next' attribute can be set with a statement, or the bitwise operator
+can be use to set the next event.
 
 ```python
 from faker_events import Event, EventGenerator
@@ -205,8 +208,7 @@ a = Event({'Name': 'A'}, limit=1)
 b = Event({'Name': 'B'}, limit=2)
 c = Event({'Name': 'C'}, limit=1)
 
-eg.first_events = a
-a >> b >> c
+eg.events = a >> b >> c
 
 eg.live_stream()
 ```
@@ -220,7 +222,7 @@ eg.live_stream()
 Event limited reached.  4 in total generated
 ```
 
-### Using the Profile for Event State
+### Persistant State
 
 If you need to update the details of the profile, or add persistant data from
 the events you can do so within the Profiled method of the Event instance.
@@ -234,26 +236,25 @@ eg = EventGenerator(num_profiles=1)
 
 event_a = {'Name': 'A', 'LastEvent': 'none'}
 
-def profile_a(self, profile):
-    profile.LastEvent = self.__class__.__name__
+def profiler_a(self, profile):
+    profile.LastEvent = 'EventA'
 
 event_b = {'Name': 'B', 'LastEvent': 'none'}
 
-def profile_b(self, profile):
+def profiler_b(self, profile):
     self.event['LastEvent'] = profile.LastEvent
-    profile.LastEvent = self.__class__.__name__
+    profile.LastEvent = 'EventB'
 
 event_c = {'Name': 'C', 'LastEvent': 'none'}
 
-def profile_c(self, profile):
+def profiler_c(self, profile):
     self.event['LastEvent'] = profile.LastEvent
 
-a = Event(event_a, profile_a, 1)
-b = Event(event_b, profile_b, 1)
-c = Event(event_c, profile_c, 1)
+a = Event(event_a, profiler_a, 1)
+b = Event(event_b, profiler_b, 1)
+c = Event(event_c, profiler_c, 1)
 
-eg.first_events = a
-a >> b >> c
+eg.events = a >> b >> c
 
 eg.live_stream()
 ```
@@ -264,6 +265,42 @@ Output
 {"Name": "B", "LastEvent": "EventA"}
 {"Name": "C", "LastEvent": "EventB"}
 Event limit reached.  3 in total generated
+```
+
+### Multiple Event Flows
+
+By grouping the events in lists, the Event Generator is able to work through
+multiple Event Flows for each profile created, creating complex event streams.
+
+```python
+from faker_events import Event, EventGenerator
+
+eg = EventGenerator(1)
+
+flow_a1 = Event({"Name": "A1"}, limit=1)
+flow_aa1 = Event({"Name": "AA1"}, limit=1)
+flow_aa2 = Event({"Name": "AA2"}, limit=1)
+
+flow_b1 = Event({"Name": "B1"}, limit=1)
+flow_bb1 = Event({"Name": "BB1"}, limit=1)
+flow_bb2 = Event({"Name": "BB2"}, limit=1)
+
+eg.events = [flow_a1, flow_b1]
+flow_a1 >> [flow_aa1, flow_aa2]
+flow_b1 >> [flow_bb1, flow_bb2]
+
+eg.live_stream()
+```
+
+Output
+```
+{"Name": "B1"}
+{"Name": "BB2"}
+{"Name": "A1"}
+{"Name": "AA1"}
+{"Name": "AA2"}
+{"Name": "BB1"}
+Event limit reached.  6 in total generated
 ```
 
 ## License
