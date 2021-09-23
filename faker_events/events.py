@@ -75,12 +75,12 @@ class Event():
         return f'{self.__class__.__name__}({self.data}, {self.profiler}, limit={self.limit})'
 
     def __lshift__(self, other):
-        other.next = self
+        self.next = other
         return other
 
     def __rshift__(self, other):
         self.next = other
-        return self
+        return other
 
     @property
     def next(self):
@@ -141,7 +141,7 @@ class EventGenerator():
                  fake: Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
-        self.events = Event(example_event, profile_example, 1)
+        self.first_events = Event(example_event, profile_example, 1)
         self._dtstamp = None
         self._state_table = []
         self._total_count = 0
@@ -263,14 +263,14 @@ class EventGenerator():
         self.profiles = result
 
     @property
-    def events(self) -> list:
+    def first_events(self) -> list:
         """
         View the first event, or use a statement to set the event.
         """
         return self._events
 
-    @events.setter
-    def events(self, events: list) -> None:
+    @first_events.setter
+    def first_events(self, events: list) -> None:
         if isinstance(events, Event):
             self._events = [events]
         elif all((isinstance(event, Event) for event in events)):
@@ -328,7 +328,7 @@ class EventGenerator():
                     {
                         'remain': event.limit,
                         'event': event
-                    } for event in self.events
+                    } for event in self.first_events
                 ]
             }
             for index, _ in enumerate(self.profiles)

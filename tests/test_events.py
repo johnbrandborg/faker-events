@@ -65,7 +65,7 @@ def event_generator_class(monkeypatch, profile_sample):
 def event_generator(event_generator_class):
     capture = CaptureStream()
     event_generator = event_generator_class(stream=capture)
-    event_generator.events = Event(example_event, profile_example, limit=1)
+    event_generator.first_events = Event(example_event, profile_example, limit=1)
     return event_generator
 
 
@@ -249,29 +249,29 @@ def test_generator_profile_creation():
         assert hasattr(event_gen.profiles[0], attr)
 
 
-def test_generator_events_get(event_generator):
+def test_generator_first_events_get(event_generator):
     """ First event method returns the Event to be used initially
     """
-    assert isinstance(event_generator.events[0], Event)
+    assert isinstance(event_generator.first_events[0], Event)
 
 
-def test_generator_events_set(event_generator):
+def test_generator_first_events_set(event_generator):
     """ First event method sets the Event to be used initially
         Setting the events also resets the state table
     """
     m_reset_state_table = Mock()
     event_generator._reset_state_table = m_reset_state_table
-    event_generator.events = Event({})
+    event_generator.first_events = Event({})
 
     assert isinstance(event_generator._events[0], Event)
     m_reset_state_table.assert_called_once()
 
 
-def test_generator_events_get_type_check(event_generator):
+def test_generator_first_events_get_type_check(event_generator):
     """ First event method checks that the type is Event
     """
     with pytest.raises(TypeError):
-        event_generator.events = 'not an Event Type'
+        event_generator.first_events = 'not an Event Type'
 
 
 def test_generator_live_stream(event_generator):
@@ -335,7 +335,8 @@ def test_generator_changes_next_event(event_generator):
     """
     eventa = Event({'name': 'a'}, limit=1)
     eventb = Event({'name': 'b'}, limit=1)
-    event_generator.events = eventa >> eventb
+    event_generator.first_events = eventa
+    eventa >> eventb
     expect_events = [{'name': 'a'}, {'name': 'b'}]
 
     assert list(event_generator.create_events()) == expect_events

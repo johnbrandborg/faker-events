@@ -198,7 +198,7 @@ def profiler(event, profile):
     }
 
 eg = EventGenerator(num_profiles=2)
-eg.events = Event(event, profiler)
+eg.first_events = Event(event, profiler)
 eg.live_stream()
 ```
 
@@ -220,12 +220,13 @@ a = Event({'Name': 'A'}, limit=1)
 b = Event({'Name': 'B'}, limit=2)
 c = Event({'Name': 'C'}, limit=1)
 
-eg.events = a
+eg.first_events = a
 a.next = b
 b.next = c
 
 # Short form:
-# eg.events = a >> b >> c
+# eg.first_events = a
+# a >> b >> c
 
 eg.live_stream()
 ```
@@ -271,7 +272,8 @@ a = Event(event_a, profiler_a, 1)
 b = Event(event_b, profiler_b, 1)
 c = Event(event_c, profiler_c, 1)
 
-eg.events = a >> b >> c
+eg.first_events = a
+a >> b >> c
 
 eg.live_stream()
 ```
@@ -303,7 +305,7 @@ flow_b1 = Event({"Name": "B1"}, limit=1)
 flow_bb1 = Event({"Name": "BB1"}, limit=1)
 flow_bb2 = Event({"Name": "BB2"}, limit=1)
 
-eg.events = [flow_a1, flow_b1]
+eg.first_events = [flow_a1, flow_b1]
 flow_a1 >> [flow_aa1, flow_aa2]
 flow_b1 >> [flow_bb1, flow_bb2]
 
