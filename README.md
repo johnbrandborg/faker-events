@@ -158,9 +158,20 @@ can be used on the 'profile' object within the Event Profiler function.
 
 ## Profiling Events
 
-Create an Event Type that has an 'event' dictionary.  If you want values to be
-processed for each event, create a function called 'profiled', and thats takes
-a dict and returns an updated dict.
+Creating an Event is as easy as just creating a dictionary that is passed into
+the Event Class.  The Event Instance is then just set on the Event Generator,
+and you can then use the 'create_events' method which will return a generator,
+or us the 'live_stream' or 'batch' methods that will handle the generator.
+
+If you want event values to be dynamic, create a profiler functions. The
+function should take two arguments; self and profile.  These carry the attributes
+listed above into the function for updating event values, or even creating new
+key value pairs.
+
+Update the event yourself by using 'self.event', which contains the dictionary
+passed into the Event Class.  The other option is to return a dictionary with
+the key value pairs you want to update.  The Event instance will handle updating
+the values.
 
 The profile is a randomly selected profile from the profiles created by the
 Event Generator.  You can use details from the profile to build our events
@@ -271,6 +282,7 @@ Output
 {"Name": "C", "LastEvent": "EventB"}
 Event limit reached.  3 in total generated
 ```
+
 
 ### Multiple Event Flows
 
