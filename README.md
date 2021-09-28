@@ -50,13 +50,17 @@ eg.live_stream(epm=120)
 
 Output
 ```json
-{"type": "example", "event_time": "2021-01-14T19:10:02.678866", "event_id": 1, "first_name": "John", "last_name": "Harris"}
-{"type": "example", "event_time": "2021-01-14T19:10:03.468144", "event_id": 2, "first_name": "Robert", "last_name": "Lane"}
-{"type": "example", "event_time": "2021-01-14T19:10:04.270969", "event_id": 3, "first_name": "Michelle", "last_name": "Clayton"}
-{"type": "example", "event_time": "2021-01-14T19:10:04.888072", "event_id": 4, "first_name": "Robert", "last_name": "Lane"}
-{"type": "example", "event_time": "2021-01-14T19:10:05.446477", "event_id": 5, "first_name": "Andrew", "last_name": "Oconnor"}
-^C
-Stopping Event Stream
+{"event_time": "2021-09-28T14:05:31.520806", "type": "example", "event_id": 1, "user_id": 1008, "first_name": "Cindy", "last_name": "Bernard"}
+{"event_time": "2021-09-28T14:05:31.997151", "type": "example", "event_id": 2, "user_id": 1003, "first_name": "Nicole", "last_name": "Mcneil"}
+{"event_time": "2021-09-28T14:05:32.241834", "type": "example", "event_id": 3, "user_id": 1004, "first_name": "David", "last_name": "Berg"}
+{"event_time": "2021-09-28T14:05:33.135551", "type": "example", "event_id": 4, "user_id": 1007, "first_name": "Kylie", "last_name": "Ortiz"}
+{"event_time": "2021-09-28T14:05:33.265245", "type": "example", "event_id": 5, "user_id": 1006, "first_name": "Steven", "last_name": "Donaldson"}
+{"event_time": "2021-09-28T14:05:34.159739", "type": "example", "event_id": 6, "user_id": 1005, "first_name": "Jennifer", "last_name": "Porter"}
+{"event_time": "2021-09-28T14:05:34.722054", "type": "example", "event_id": 7, "user_id": 1009, "first_name": "Jason", "last_name": "York"}
+{"event_time": "2021-09-28T14:05:35.054572", "type": "example", "event_id": 8, "user_id": 1002, "first_name": "Peter", "last_name": "Elliott"}
+{"event_time": "2021-09-28T14:05:35.613473", "type": "example", "event_id": 9, "user_id": 1000, "first_name": "Tina", "last_name": "Nelson"}
+{"event_time": "2021-09-28T14:05:36.166375", "type": "example", "event_id": 10, "user_id": 1001, "first_name": "Jason", "last_name": "Raymond"}
+Event limit reached.  10 in total generated
 ```
 
 If you want to see a demo of  this without writing code, run faker_events as a
@@ -113,11 +117,12 @@ eg.batch(start, finish, epm=10)
 ### Event Data Points
 
 The Event Type has some basic data points about the event that can be used
-within the profiled method. (Access the Attribute using the event within the
+within the profiled method. (Access the Attribute using the 'event' within the
 profiler)
 
-* event_id - The id of the particular event
-* event_time - The time the event occured (ISO Format)
+* id - The id of the particular event, based on the event dictionary.
+* time - The time the event occured (ISO Format).
+* data - Event Data for updates or augmented assignments.
 
 ### Profile Data Points
 
@@ -241,6 +246,63 @@ Event limited reached.  4 in total generated
 ```
 
 ### Persistant State
+
+When creating event flows there is some concepts around how Faker Events works
+that you should get familiar with.
+
+1. The dictionary created is used only as a template for Events
+2. Dictionaries that are identical will be treated as the same flow
+3. Profile Functions should declare a puprose and what needs to be change
+4. Event limit is for each profile created by the generator.
+
+The following example shows how we create a type of event with the dictionary
+'customer', and then a flow in which a new customer event is made, followed by
+a job change for the customer.
+
+The generator has 2 profiles, and we as for 1 of each event type, resulting in
+4 events. (Events with no limit will occur as long as the stream is running,
+without attempting to switch to the next event, even if one is set.)
+
+```python
+from faker_events import EventGenerator, Event
+from faker import Faker
+
+faker = Faker()
+eg = EventGenerator(num_profiles=2)
+
+customer = {'Name': 'Unknown', 'Job': None, 'Created': None, 'Updated': None}
+
+def new_customer(event, profile):
+    return {
+        "Name": profile.first_name,
+        "Job": profile.job,
+        "Created": event.time,
+        "Updated": event.time
+    }
+
+def change_job(event, profile):
+    return {
+        "Job": faker.job(),
+        "Updated": event.time
+    }
+
+new_customer_event = Event(customer, new_customer, limit=1)
+customer_marriged_event = Event(customer, change_job, limit=1)
+
+eg.first_events = new_customer_event
+new_customer_event >> customer_marriged_event
+
+eg.live_stream()
+```
+
+Output
+```
+{"Name": "Ian", "Job": "Medical technical officer", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:55.809062"}
+{"Name": "Eduardo", "Job": "Conservation officer, nature", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:56.316593"}
+{"Name": "Ian", "Job": "Database administrator", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:56.773134"}
+{"Name": "Eduardo", "Job": "Ergonomist", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:57.694891"}
+Event limit reached.  4 in total generated
+```
 
 If you need to update the details of the profile, or add persistant data from
 the events you can do so within the Profiled method of the Event instance.

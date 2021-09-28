@@ -13,7 +13,7 @@ from faker_events.events import (
     Event,
     EventGenerator,
     example_event,
-    profile_example
+    profiler_example
 )
 
 
@@ -65,7 +65,7 @@ def event_generator_class(monkeypatch, profile_sample):
 def event_generator(event_generator_class):
     capture = CaptureStream()
     event_generator = event_generator_class(stream=capture)
-    event_generator.first_events = Event(example_event, profile_example, limit=1)
+    event_generator.first_events = Event(example_event, profiler_example, limit=1)
     return event_generator
 
 
@@ -86,13 +86,13 @@ def profile_json():
 def test_event_returns_unprofiled(event):
     """ Event call only returns the event data
     """
-    assert event() == {}
+    assert event.process() == {}
 
 
 def test_event_returns_profiles(event_profiled):
     """ Event call returns the profiled data
     """
-    assert event_profiled()['Profiled']
+    assert event_profiled.process()['Profiled']
 
 
 def test_event_repr(event):
@@ -126,13 +126,14 @@ def test_event_next_set_type_check(event):
 def test_example_event_update(profile_sample):
     """ ExampleEvent Output
     """
-    example = Event(example_event, profile_example)
-    example(profile_sample)
+    event_time = datetime.now().isoformat("Z")
+    example = Event(example_event, profiler_example)
+    example.process(0, profile_sample, event_time)
 
     assert example.data == {
         'type': 'example',
-        'event_time': None,
-        'event_id': 0,
+        'event_time': event_time,
+        'event_id': 1,
         'user_id': '1',
         'first_name': 'John',
         'last_name': 'Smith'

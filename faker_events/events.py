@@ -2,10 +2,12 @@
 Events module for creating custom types and generating Messages
 """
 
+from copy import deepcopy
 from datetime import datetime, timedelta
+from hashlib import md5
 import json
 from random import choice, randint, random
-from sys import stderr
+from sys import stderr, exit as sys_exit
 from time import sleep
 from types import SimpleNamespace
 
@@ -25,10 +27,10 @@ example_event = {
 }
 
 
-def profile_example(self, profile: dict) -> dict:
+def profiler_example(event, profile: dict) -> dict:
     return {
-        'event_time': self.event_time,
-        'event_id': self.event_id,
+        'event_time': event.time,
+        'event_id': event.id,
         'user_id': profile.id,
         'first_name': profile.first_name,
         'last_name': profile.last_name
@@ -42,7 +44,7 @@ class Event():
 
     Parameters
     ----------
-        event: dict
+        data: dict
             Base data structure used for events.  All values must be declared
             for the automatic value updates to occur.
         profiler: function
@@ -51,28 +53,28 @@ class Event():
             the update to occur automatically.
         limit: int
             The number of times to process the event.
+        group_up: bool
+            If set to true the next event will occur at the same time when
+            using the batch or live_stream methods of the generator.
     """
+
+    _events_data = {}
 
     def __init__(self,
                  data: dict,
                  profiler: callable = None,
-                 limit: int = None):
-        self.data = data
+                 limit: int = None,
+                 group_up=False):
         self.profiler = profiler
         self.limit = limit
-        self.event_id = 0
-        self.event_time = None
+        self.group_up = group_up
+        self._data = self._get_data(data)
         self._next_events = None
 
-    def __call__(self, profile=None) -> dict:
-        if callable(self.profiler):
-            returned = self.profiler(self, profile)
-            if returned:
-                self._update_values(self.data, returned)
-        return self.data
-
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.data}, {self.profiler}, limit={self.limit})'
+        return (f'{self.__class__.__name__}'
+                f'({self._data.get("template")}, '
+                f'{self.profiler}, limit={self.limit})')
 
     def __lshift__(self, other):
         self.next = other
@@ -81,6 +83,20 @@ class Event():
     def __rshift__(self, other):
         self.next = other
         return other
+
+    @classmethod
+    def clear(cls):
+        """
+        The persistant Event Data for all the of the profiles is cleared.
+        """
+        cls._events_data.clear()
+
+    @classmethod
+    def _get_data(cls, template):
+        dict_hash = md5(repr(sorted(template.items())).encode()).hexdigest()
+        if dict_hash not in cls._events_data:
+            cls._events_data[dict_hash] = {"id": 0, "template": template}
+        return cls._events_data[dict_hash]
 
     @property
     def next(self):
@@ -101,6 +117,26 @@ class Event():
             self._next_events = events
         else:
             raise TypeError("Events must be only Event Type instances")
+
+    def process(self, index=0, profile=None, time=None) -> dict:
+        if index not in self._data:
+            self._data[index] = deepcopy(self._data['template'])
+        self._data['id'] += 1
+
+        self.data = self._data[index]
+        self.time = time if time else datetime.now().isoformat("T")
+        self.id = self._data['id']
+
+        if callable(self.profiler):
+            try:
+                returned = self.profiler(self, profile)
+            except AttributeError as err:
+                print(f"Please check your profiler function: {err}", file=stderr)
+                sys_exit(1)
+            if returned:
+                self._update_values(self.data, returned)
+
+        return self.data
 
     @staticmethod
     def _update_values(dict1: dict, dict2: dict) -> None:
@@ -141,7 +177,7 @@ class EventGenerator():
                  fake: Faker = None):
         self.num_profiles = num_profiles
         self.stream = stream if stream else Stream()
-        self.first_events = Event(example_event, profile_example, 1)
+        self.first_events = Event(example_event, profiler_example, 1)
         self._dtstamp = None
         self._state_table = []
         self._total_count = 0
@@ -165,6 +201,8 @@ class EventGenerator():
         else:
             self.create_profiles()
 
+        Event.clear()
+
     def create_events(self) -> dict:
         """
         Selects a profile to be used, and will request the Event Type
@@ -183,12 +221,11 @@ class EventGenerator():
             event = self._state_table[sindex]['events'][eindex]['event']
             selected_profile = self.profiles[pindex]
 
-            event.event_time = self._dtstamp.isoformat('T') \
-                if self._dtstamp else datetime.now().isoformat('T')
+            self._skip_sleep = event.group_up
+            event_time = self._dtstamp.isoformat('T') if self._dtstamp else None
 
             self._total_count += 1
-            event.event_id += 1
-            yield event(selected_profile)
+            yield event.process(pindex, selected_profile, time=event_time)
 
             if remain is not None:
                 self._state_table[sindex]['events'][eindex]['remain'] -= 1
@@ -203,7 +240,7 @@ class EventGenerator():
         """
         result = []
 
-        for _ in range(self.num_profiles):
+        for identification in range(self.num_profiles):
             gender = choice(('male', 'female'))
 
             if gender == 'female':
@@ -222,7 +259,7 @@ class EventGenerator():
                       '|{{postcode}}|{{city}}'
             address1 = self.fake.parse(address).split('|')
             profile = {
-                'id': str(self.fake.unique.random_number()),
+                'id': identification + 1000,
                 'uuid': self.fake.uuid4(),
                 'username': self.fake.user_name(),
                 'gender': gender,
@@ -291,7 +328,8 @@ class EventGenerator():
         try:
             for event in self.create_events():
                 self.stream.send(json.dumps(event, indent=indent))
-                sleep(random() * 60/epm)
+                if not self._skip_sleep:
+                    sleep(random() * 60/epm)
         except KeyboardInterrupt:
             print(f"\nStopping Event Stream.  {self._total_count} in total generated.",
                   file=stderr)
@@ -315,7 +353,8 @@ class EventGenerator():
                           file=stderr)
                     break
                 self.stream.send(json.dumps(event, indent=indent))
-                self._dtstamp += timedelta(seconds=random() * 60/epm)
+                if not self._skip_sleep:
+                    self._dtstamp += timedelta(seconds=random() * 60/epm)
         except KeyboardInterrupt:
             print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
                   file=stderr)
