@@ -237,7 +237,7 @@ eg.live_stream()
 ```
 
 **Output**
-```
+```json
 {"Name": "A"}
 {"Name": "B"}
 {"Name": "B"}
@@ -296,7 +296,7 @@ eg.live_stream()
 ```
 
 Output
-```
+```json
 {"Name": "Ian", "Job": "Medical technical officer", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:55.809062"}
 {"Name": "Eduardo", "Job": "Conservation officer, nature", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:56.316593"}
 {"Name": "Ian", "Job": "Database administrator", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:56.773134"}
@@ -341,7 +341,7 @@ eg.live_stream()
 ```
 
 Output
-```
+```json
 {"Name": "A", "LastEvent": "none"}
 {"Name": "B", "LastEvent": "EventA"}
 {"Name": "C", "LastEvent": "EventB"}
@@ -375,7 +375,7 @@ eg.live_stream()
 ```
 
 Output
-```
+```json
 {"Name": "B1"}
 {"Name": "BB2"}
 {"Name": "A1"}
