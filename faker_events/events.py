@@ -52,21 +52,21 @@ class Event():
             event can be updated within the function, or return the dict for
             the update to occur automatically.
         limit: int
-            The number of times to process the event.
+            The number of times to process the event. Set to 0 for infinite
+            events.
         group_up: bool
             If set to true the next event will occur at the same time when
             using the batch or live_stream methods of the generator.
     """
-
     _events_data = {}
 
     def __init__(self,
                  data: dict,
                  profiler: callable = None,
-                 limit: int = None,
-                 group_up=False):
+                 limit: int = 1,
+                 group_up: bool = False):
         self.profiler = profiler
-        self.limit = limit
+        self.limit = int(limit)
         self.group_up = group_up
         self._data = self._get_data(data)
         self._next_events = None
@@ -75,6 +75,11 @@ class Event():
         return (f'{self.__class__.__name__}'
                 f'({self._data.get("template")}, '
                 f'{self.profiler}, limit={self.limit})')
+
+    def __and__(self, other):
+        self.next = other
+        self.group_up = True
+        return other
 
     def __lshift__(self, other):
         self.next = other
@@ -122,7 +127,7 @@ class Event():
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
         self._data['id'] += 1
-
+        print(time, file=stderr)
         self.data = self._data[index]
         self.time = time if time else datetime.now().isoformat("T")
         self.id = self._data['id']
@@ -131,11 +136,11 @@ class Event():
             try:
                 returned = self.profiler(self, profile)
             except AttributeError as err:
-                print(f"Please check your profiler function: {err}", file=stderr)
-                sys_exit(1)
+                print(f"ERROR: Please check your profiler function: {err}",
+                      file=stderr)
+                return
             if returned:
                 self._update_values(self.data, returned)
-
         return self.data
 
     @staticmethod
@@ -162,45 +167,45 @@ class EventGenerator():
             The number of times to process the event
         stream: faker_events.Stream
             Stream handler to use for sending messages
-        use_profile_file: bool
+        profiles_file: str
             Creates and Uses a file for persistant profiles
         fake: Faker
             Customised Faker instance otherise one is created
     """
-
     profiles = []
 
     def __init__(self,
                  num_profiles: int = 10,
                  stream: Stream = None,
-                 use_profile_file: bool = False,
+                 profiles_file: str = None,
                  fake: Faker = None):
-        self.num_profiles = num_profiles
+        self.num_profiles = int(num_profiles)
         self.stream = stream if stream else Stream()
-        self.first_events = Event(example_event, profiler_example, 1)
+        self.profiles_file = profiles_file
+        self.fake = fake if fake and isinstance(fake, Faker) else Faker()
+        self.first_events = Event(example_event, profiler_example, 0)
         self._dtstamp = None
         self._state_table = []
         self._total_count = 0
-        self.profile_filename = 'profiles.json'
 
-        self.fake = fake if fake and \
-            isinstance(fake, Faker) else Faker()
-
-        if use_profile_file:
+        if isinstance(self.profiles_file, str):
             try:
-                with open(self.profile_filename) as profiles_file:
-                    profiles_dicts = json.loads(profiles_file.read())
-                    self.profiles = [SimpleNamespace(**profiles)
-                                     for profiles in profiles_dicts]
+                with open(self.profiles_file) as file:
+                    profiles_dicts = json.loads(file.read())
+                    self.profiles = [
+                        SimpleNamespace(**profiles)
+                        for index, profiles in enumerate(profiles_dicts)
+                        if index < num_profiles
+                    ]
             except FileNotFoundError:
                 self.create_profiles()
-
-                with open(self.profile_filename, 'w') as profiles_file:
-                    profiles_dicts = [vars(item) for item in self.profiles]
-                    profiles_file.write(json.dumps(profiles_dicts))
+                self.write_profiles()
+            if num_profiles > len(self.profiles):
+                print("The number of profile requested exceeds the profiles "
+                      "file. Consider recreating and writing the profiles",
+                      file=stderr)
         else:
             self.create_profiles()
-
         Event.clear()
 
     def create_events(self) -> dict:
@@ -208,7 +213,6 @@ class EventGenerator():
         Selects a profile to be used, and will request the Event Type
         to process the data if available.
         """
-
         if not self._state_table:
             self._reset_state_table()
 
@@ -227,7 +231,7 @@ class EventGenerator():
             self._total_count += 1
             yield event.process(pindex, selected_profile, time=event_time)
 
-            if remain is not None:
+            if remain > 0 and not remain < 0:
                 self._state_table[sindex]['events'][eindex]['remain'] -= 1
                 self._process_state_entry(sindex, eindex)
 
@@ -322,11 +326,12 @@ class EventGenerator():
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
         """
-
         self._dtstamp = None
 
         try:
             for event in self.create_events():
+                if event is None:
+                    break
                 self.stream.send(json.dumps(event, indent=indent))
                 if not self._skip_sleep:
                     sleep(random() * 60/epm)
@@ -341,13 +346,15 @@ class EventGenerator():
               indent: int = None) -> None:
         """
         Produces a batch of randomly timed events. Events per minute can
-        be adjust, and if the JSON should have indentation of num spaces
+        be adjust, and if the JSON should have indentation of num spaces.
         """
 
         self._dtstamp = start
 
         try:
             for event in self.create_events():
+                if event is None:
+                    break
                 if self._dtstamp >= finish:
                     print(f"Finish time reached.  {self._total_count} in total generated.",
                           file=stderr)
@@ -358,6 +365,17 @@ class EventGenerator():
         except KeyboardInterrupt:
             print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
                   file=stderr)
+
+    def write_profiles(self):
+        """
+        Writes the profile data created in the Event Generator to file to file.
+        """
+        if self.profiles_file:
+            with open(self.profiles_file, 'w') as file:
+                profiles_dicts = [vars(item) for item in self.profiles]
+                file.write(json.dumps(profiles_dicts))
+        else:
+            print("Unable to write file.  No profiles_file value was set.")
 
     def _reset_state_table(self) -> None:
         self._state_table = [

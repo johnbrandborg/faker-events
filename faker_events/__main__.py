@@ -9,7 +9,9 @@ from faker_events import EventGenerator
 
 def main():
     """
-    Main Function
+    Main Function if run as a module.  Example Events are generated to console.
+
+    'python -m faker_events'
     """
     event_generator = EventGenerator()
     event_generator.live_stream()

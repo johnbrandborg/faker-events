@@ -44,7 +44,7 @@ minute, but they are random so expect potentially lower rates.
 ```python
 import faker_events
 
-eg = faker_events.EventGenerator(num_profiles=100)
+eg = faker_events.EventGenerator()
 eg.live_stream(epm=120)
 ```
 
@@ -60,18 +60,18 @@ Output
 {"event_time": "2021-09-28T14:05:35.054572", "type": "example", "event_id": 8, "user_id": 1002, "first_name": "Peter", "last_name": "Elliott"}
 {"event_time": "2021-09-28T14:05:35.613473", "type": "example", "event_id": 9, "user_id": 1000, "first_name": "Tina", "last_name": "Nelson"}
 {"event_time": "2021-09-28T14:05:36.166375", "type": "example", "event_id": 10, "user_id": 1001, "first_name": "Jason", "last_name": "Raymond"}
-Event limit reached.  10 in total generated
+^C
+Stopping Event Stream.  10 in total generated.
 ```
 
 If you want to see a demo of  this without writing code, run faker_events as a
- module from the command line.
+ module from the command line.  CTRL-C to stop the event stream.
 
 ```bash
 python -m faker_events
 ```
 
 ### Using Stream Handlers
-
 Once you have installed Faker Events with the Stream type you want you
 can now use a stream handler to send the JSON messages to Kakfa, or
 Kinesis.
@@ -113,9 +113,7 @@ eg.batch(start, finish, epm=10)
 ```
 
 ## Data Points
-
 ### Event Data Points
-
 The Event Type has some basic data points about the event that can be used
 within the profiled method. (Access the Attribute using the 'event' within the
 profiler)
@@ -125,7 +123,6 @@ profiler)
 * data - Event Data for updates or augmented assignments.
 
 ### Profile Data Points
-
 When you create the Event Generator, the profiles you will use in the events
 are created with a number of data points. Below is a list of attributes that
 can be used on the 'profile' within the Event Profiler function.
@@ -163,7 +160,6 @@ can be used on the 'profile' within the Event Profiler function.
 * license_plate
 
 ## Profiling Events
-
 Creating an Event is as easy as just creating a dictionary that is passed into
 the Event Class.  The Event Instance is then just set on the Event Generator,
 and you can then use the 'create_events' method which will return a generator,
@@ -208,10 +204,10 @@ eg.live_stream()
 ```
 
 ## Event Sequences
-
+#### Ordered
 You can sequence the events by setting the next event to occur, and occurence
-on how many times it will happen.  If no limit is set, the next Event Type will
-never be used.
+on how many times it will happen. To have events occur more than once, increase
+the limit.
 
 Either the 'next' attribute can be set with a statement, or the bitwise operator
 can be use to set the next event.
@@ -221,9 +217,9 @@ from faker_events import Event, EventGenerator
 
 eg = EventGenerator(num_profiles=1)
 
-a = Event({'Name': 'A'}, limit=1)
+a = Event({'Name': 'A'})
 b = Event({'Name': 'B'}, limit=2)
-c = Event({'Name': 'C'}, limit=1)
+c = Event({'Name': 'C'})
 
 eg.first_events = a
 a.next = b
@@ -245,23 +241,31 @@ eg.live_stream()
 Event limited reached.  4 in total generated
 ```
 
-### Persistant State
+#### Group
+If you need to two different events to be grouped together, you can set the
+group_by parameter to true on the Event instance creation.  This will cause the
+live_stream and batch methods to send them together.
 
+You can also use the '&' operator (rather than '>>') to set the next event but
+grouped together so the event_time is the same.  Try not to mix the operators
+into long mixed sequences as it can cause problems with the ordering.
+
+### Persistant State
 When creating event flows there is some concepts around how Faker Events works
 that you should get familiar with.
 
 1. The dictionary created is used only as a template for Events
 2. Dictionaries that are identical will be treated as the same flow
 3. Profile Functions should declare a puprose and what needs to be change
-4. Event limit is for each profile created by the generator.
+4. Event limit is for each profile created by the generator. (Default is 1)
 
 The following example shows how we create a type of event with the dictionary
 'customer', and then a flow in which a new customer event is made, followed by
 a job change for the customer.
 
-The generator has 2 profiles, and we as for 1 of each event type, resulting in
-4 events. (Events with no limit will occur as long as the stream is running,
-without attempting to switch to the next event, even if one is set.)
+The generator has 2 profiles, and 1 of each event type, resulting in 4 events.
+(Events with a limit of 0 will occur as long as the stream is running, without
+ attempting to switch to the next event, even if one is set.)
 
 ```python
 from faker_events import EventGenerator, Event
@@ -286,8 +290,8 @@ def change_job(event, profile):
         "Updated": event.time
     }
 
-new_customer_event = Event(customer, new_customer, limit=1)
-customer_marriged_event = Event(customer, change_job, limit=1)
+new_customer_event = Event(customer, new_customer)
+customer_marriged_event = Event(customer, change_job)
 
 eg.first_events = new_customer_event
 new_customer_event >> customer_marriged_event
@@ -348,9 +352,7 @@ Output
 Event limit reached.  3 in total generated
 ```
 
-
 ### Multiple Event Flows
-
 By grouping the events in lists, the Event Generator is able to work through
 multiple Event Flows for each profile created, creating complex event streams.
 
@@ -359,13 +361,13 @@ from faker_events import Event, EventGenerator
 
 eg = EventGenerator(1)
 
-flow_a1 = Event({"Name": "A1"}, limit=1)
-flow_aa1 = Event({"Name": "AA1"}, limit=1)
-flow_aa2 = Event({"Name": "AA2"}, limit=1)
+flow_a1 = Event({"Name": "A1"})
+flow_aa1 = Event({"Name": "AA1"})
+flow_aa2 = Event({"Name": "AA2"})
 
-flow_b1 = Event({"Name": "B1"}, limit=1)
-flow_bb1 = Event({"Name": "BB1"}, limit=1)
-flow_bb2 = Event({"Name": "BB2"}, limit=1)
+flow_b1 = Event({"Name": "B1"})
+flow_bb1 = Event({"Name": "BB1"})
+flow_bb2 = Event({"Name": "BB2"})
 
 eg.first_events = [flow_a1, flow_b1]
 flow_a1 >> [flow_aa1, flow_aa2]
@@ -386,9 +388,7 @@ Event limit reached.  6 in total generated
 ```
 
 ## License
-
 Faker-Events is released under the MIT License. See the bundled LICENSE file for details.
 
 ## Credits
-
 * [Daniele Faraglia](https://github.com/joke2k) & [Flavio Curella](https://github.com/fcurella) / [Faker](https://github.com/joke2k/faker)
