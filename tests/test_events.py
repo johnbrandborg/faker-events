@@ -98,7 +98,7 @@ def test_event_returns_profiles(event_profiled):
 def test_event_repr(event):
     """ Event Repr format check
     """
-    assert repr(event) == 'Event({}, None, limit=None)'
+    assert repr(event) == 'Event({}, None, limit=1)'
 
 
 def test_event_next_get(event):
@@ -145,9 +145,9 @@ def test_generator_profile_file_read(profile_json, profile_sample):
     """
     mocked_file = mock_open(read_data=profile_json)
     with patch('faker_events.events.open', mocked_file) as mopen:
-        event_generator = EventGenerator(1, None, True)
+        event_generator = EventGenerator(1, profiles_file='test')
 
-    mopen.assert_called_once_with('profiles.json')
+    mopen.assert_called_once_with('test')
     assert event_generator.profiles == [profile_sample]
 
 
@@ -158,7 +158,7 @@ def test_generator_profile_file_create(event_generator_class):
     mopen.side_effect = [FileNotFoundError, mopen.return_value]
 
     with patch('faker_events.events.open', mopen):
-        event_generator_class(1, None, True)
+        event_generator_class(1, profiles_file='test')
 
     assert mopen.call_count == 2
 

@@ -127,7 +127,6 @@ class Event():
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
         self._data['id'] += 1
-        print(time, file=stderr)
         self.data = self._data[index]
         self.time = time if time else datetime.now().isoformat("T")
         self.id = self._data['id']
