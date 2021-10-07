@@ -122,6 +122,9 @@ profiler)
 * time - The time the event occured (ISO Format).
 * data - Event Data for updates or augmented assignments.
 
+By default the Event time is local time.  Set the timezone on the generator
+when required.
+
 ### Profile Data Points
 When you create the Event Generator, the profiles you will use in the events
 are created with a number of data points. Below is a list of attributes that

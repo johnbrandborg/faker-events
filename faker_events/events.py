@@ -3,7 +3,7 @@ Events module for creating custom types and generating Messages
 """
 
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from hashlib import md5
 import json
 from random import choice, randint, random
@@ -123,12 +123,12 @@ class Event():
         else:
             raise TypeError("Events must be only Event Type instances")
 
-    def process(self, index=0, profile=None, time=None) -> dict:
+    def process(self, index=0, profile=None, time="") -> dict:
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
         self._data['id'] += 1
         self.data = self._data[index]
-        self.time = time if time else datetime.now().isoformat("T")
+        self.time = time
         self.id = self._data['id']
 
         if callable(self.profiler):
@@ -224,9 +224,12 @@ class EventGenerator():
             event = self._state_table[sindex]['events'][eindex]['event']
             selected_profile = self.profiles[pindex]
 
-            self._skip_sleep = event.group_up
-            event_time = self._dtstamp.isoformat('T') if self._dtstamp else None
+            if self._dtstamp:
+                event_time = self._dtstamp.astimezone(self.timezone).isoformat()
+            else:
+                event_time = datetime.now(self.timezone).isoformat()
 
+            self._skip_sleep = event.group_up
             self._total_count += 1
             yield event.process(pindex, selected_profile, time=event_time)
 
@@ -325,8 +328,8 @@ class EventGenerator():
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
         """
-        self._dtstamp = None
 
+        self._dtstamp = None
         try:
             for event in self.create_events():
                 if event is None:
@@ -349,7 +352,6 @@ class EventGenerator():
         """
 
         self._dtstamp = start
-
         try:
             for event in self.create_events():
                 if event is None:
@@ -364,6 +366,8 @@ class EventGenerator():
         except KeyboardInterrupt:
             print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
                   file=stderr)
+        finally:
+            self._dtstamp = None
 
     def write_profiles(self):
         """
@@ -375,6 +379,26 @@ class EventGenerator():
                 file.write(json.dumps(profiles_dicts))
         else:
             print("Unable to write file.  No profiles_file value was set.")
+
+    @property
+    def timezone(self):
+        """
+        Timezone offset used for the event time.  Set between -24 and 24,
+        0 for UTC or None for local time.
+        """
+        if hasattr(self, "_tzobject"):
+            return self._tzobject
+
+    @timezone.setter
+    def timezone(self, offset: int):
+        if isinstance(offset, int):
+            try:
+                self._tzobject = timezone(timedelta(hours=offset))
+            except ValueError:
+                print("WARNING: Offset must be between -24 and 24 hours",
+                      file=stderr)
+        else:
+            self._tzobject = None
 
     def _reset_state_table(self) -> None:
         self._state_table = [
