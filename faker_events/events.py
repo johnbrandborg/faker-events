@@ -184,6 +184,7 @@ class EventGenerator():
         self.fake = fake if fake and isinstance(fake, Faker) else Faker()
         self.first_events = Event(example_event, profiler_example, 0)
         self._dtstamp = None
+        self._tzobject = None
         self._state_table = []
         self._total_count = 0
 
@@ -224,8 +225,10 @@ class EventGenerator():
             event = self._state_table[sindex]['events'][eindex]['event']
             selected_profile = self.profiles[pindex]
 
-            if self._dtstamp:
+            if self._dtstamp and self._tzobject:
                 event_time = self._dtstamp.astimezone(self.timezone).isoformat()
+            elif self._dtstamp:
+                event_time = self._dtstamp.isoformat()
             else:
                 event_time = datetime.now(self.timezone).isoformat()
 
@@ -328,7 +331,6 @@ class EventGenerator():
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
         """
-
         self._dtstamp = None
         try:
             for event in self.create_events():
@@ -350,7 +352,6 @@ class EventGenerator():
         Produces a batch of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces.
         """
-
         self._dtstamp = start
         try:
             for event in self.create_events():
@@ -366,8 +367,6 @@ class EventGenerator():
         except KeyboardInterrupt:
             print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
                   file=stderr)
-        finally:
-            self._dtstamp = None
 
     def write_profiles(self):
         """
@@ -386,8 +385,7 @@ class EventGenerator():
         Timezone offset used for the event time.  Set between -24 and 24,
         0 for UTC or None for local time.
         """
-        if hasattr(self, "_tzobject"):
-            return self._tzobject
+        return self._tzobject
 
     @timezone.setter
     def timezone(self, offset: int):
