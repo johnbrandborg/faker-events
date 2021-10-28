@@ -2,15 +2,16 @@
 Events module for creating custom types and generating Messages
 """
 
+import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from hashlib import md5
 import json
 from random import choice, randint, random
-from sys import stderr, exit as sys_exit
-from time import sleep
+from sys import stderr
 from types import SimpleNamespace
 
+from croniter import croniter
 from faker import Faker
 from .handlers import Stream
 
@@ -64,10 +65,12 @@ class Event():
                  data: dict,
                  profiler: callable = None,
                  limit: int = 1,
-                 group_up: bool = False):
+                 group_up: bool = False,
+                 cron: str = None):
         self.profiler = profiler
         self.limit = int(limit)
         self.group_up = group_up
+        self.cron = cron
         self._data = self._get_data(data)
         self._next_events = None
 
@@ -138,7 +141,9 @@ class Event():
                 print(f"ERROR: Please check your profiler function: {err}",
                       file=stderr)
                 return
-            if returned:
+            if returned == None:
+                return returned
+            else:
                 self._update_values(self.data, returned)
         return self.data
 
@@ -182,11 +187,12 @@ class EventGenerator():
         self.stream = stream if stream else Stream()
         self.profiles_file = profiles_file
         self.fake = fake if fake and isinstance(fake, Faker) else Faker()
-        self.first_events = Event(example_event, profiler_example, 0)
+        self.first_events = Event(example_event, profiler_example, 10)
         self._dtstamp = None
         self._tzobject = None
         self._state_table = []
         self._total_count = 0
+        self._scheduled = []
 
         if isinstance(self.profiles_file, str):
             try:
@@ -326,22 +332,68 @@ class EventGenerator():
 
         self._reset_state_table()
 
-    def live_stream(self, epm: int = 60, indent: int = None) -> None:
+    async def live_stream(self, epm: int = 60, indent: int = None) -> None:
         """
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
         """
         self._dtstamp = None
-        try:
-            for event in self.create_events():
-                if event is None:
-                    break
-                self.stream.send(json.dumps(event, indent=indent))
-                if not self._skip_sleep:
-                    sleep(random() * 60/epm)
-        except KeyboardInterrupt:
-            print(f"\nStopping Event Stream.  {self._total_count} in total generated.",
-                  file=stderr)
+        for event in self.create_events():
+            self.stream.send(json.dumps(event, indent=indent))
+            if not self._skip_sleep:
+                await asyncio.sleep(random() * 60/epm)
+
+    @property
+    def scheduled_events(self) -> list:
+        """
+        View the first event, or use a statement to set the event.
+        """
+        return self._scheduled
+
+    @scheduled_events.setter
+    def scheduled_events(self, events: list) -> None:
+        if isinstance(events, Event):
+            self._scheduled.append(events)
+        elif all((isinstance(event, Event) for event in events)):
+            self._scheduled.extend(events)
+        else:
+            raise TypeError("Events must be only Event Type instances")
+
+    @scheduled_events.deleter
+    def scheduled_events(self, events: list) -> None:
+        if isinstance(events, list):
+            for event in events:
+                if event in self.scheduled_events:
+                    self.scheduled_events.remove(event)
+        else:
+            if events in self.scheduled_events:
+                self.scheduled_events.remove(events)
+
+    async def schedule(self):
+        """
+        Produces a live stream of timed events.
+        """
+        self._dtbase = datetime.now()
+        await asyncio.sleep((60 - self._dtbase.second) +
+                            ((100000 - self._dtbase.microsecond) / 1000000))
+        for event in self._scheduled:
+            event._croniter = croniter(event.cron, self._dtbase)
+
+        while True:
+            current_time = datetime.now()
+            for index, profile in enumerate(self.profiles):
+                for event in self._scheduled:
+                    scheduled_time = event._croniter.get_current(datetime)
+                    if current_time >= scheduled_time:
+                        result = event.process(index,
+                                               profile,
+                                               time=current_time.isoformat())
+                        if result:
+                            self.stream.send(result)
+                            self._total_count += 1
+                        if (index + 1) == len(self.profiles):
+                            event._croniter.get_next()
+            await asyncio.sleep(60)
 
     def batch(self,
               start: datetime,
@@ -355,8 +407,6 @@ class EventGenerator():
         self._dtstamp = start
         try:
             for event in self.create_events():
-                if event is None:
-                    break
                 if self._dtstamp >= finish:
                     print(f"Finish time reached.  {self._total_count} in total generated.",
                           file=stderr)
