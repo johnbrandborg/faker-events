@@ -141,7 +141,7 @@ class Event():
                 print(f"ERROR: Please check your profiler function: {err}",
                       file=stderr)
                 return
-            if returned == None:
+            if returned is None:
                 return returned
             else:
                 self._update_values(self.data, returned)
