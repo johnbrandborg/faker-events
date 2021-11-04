@@ -34,6 +34,8 @@ class Event():
         limit: int
             The number of times to process the event. Set to 0 for infinite
             events.
+        epm:
+            The estimate of random 'Events Per Minute' that will be created.
         group_up: bool
             If set to true the next event will occur at the same time when
             using the batch or live_stream methods of the generator.
@@ -47,10 +49,12 @@ class Event():
                  data: dict,
                  profiler: callable = None,
                  limit: int = 1,
+                 epm: int = 60,
                  group_up: bool = False,
                  cron: str = None):
         self.profiler = profiler
         self.limit = int(limit)
+        self.epm = int(epm)
         self.group_up = group_up
         self.cron = cron
         self._data = self._get_data(data)
@@ -108,7 +112,7 @@ class Event():
         else:
             raise TypeError("Events must be only Event Type instances")
 
-    def process(self, index=0, time="") -> dict:
+    def process(self, index=0, time="") -> tuple:
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
         self._data['id'] += 1
@@ -117,17 +121,15 @@ class Event():
         self.id = self._data['id']
 
         if callable(self.profiler):
-            try:
-                returned = self.profiler(self, entries[index])
-            except AttributeError as err:
-                print(f"ERROR: Please check your profiler function: {err}",
-                      file=stderr)
-                return
-            if returned is None:
-                return None
-            else:
+            returned = self.profiler(self, entries[index])
+
+            if isinstance(returned, dict):
                 self._update_values(self.data, returned)
-        return self.data
+            elif returned == 'skip':
+                return None, 0, False
+
+        delay = None if self.group_up else random() * 60/self.epm
+        return self.data, delay, True
 
     @staticmethod
     def _update_values(dict1: dict, dict2: dict) -> None:
@@ -146,24 +148,42 @@ class EventGenerator():
     """
     The Event Generator is the central engine.  It creates profiles,
     and events to be sent to the Handlers.
-
-    Parameters
-    ----------
-        stream: faker_events.Stream
-            Stream handler to use for sending messages
     """
 
-    timezone = None
+    _stream = Stream()
+    _events = []
+    _scheduled = []
+    _timezone = None
 
-    def __init__(self, stream: Stream = None):
-        self.stream = stream if stream else Stream()
-        self._events = []
-        self._scheduled = []
+    def __init__(self):
         self._dtstamp = None
         self._state_table = []
         self._total_count = 0
 
         Event.clear()
+
+    # def batch(self,
+              # start: datetime,
+              # finish: datetime,
+              # epm: int = 60,
+              # indent: int = None) -> None:
+        # """
+        # Produces a batch of randomly timed events. Events per minute can
+        # be adjust, and if the JSON should have indentation of num spaces.
+        # """
+        # self._dtstamp = start
+        # try:
+            # for event in self.create_events():
+                # if self._dtstamp >= finish:
+                    # print(f"Finish time reached.  {self._total_count} in total generated.",
+                          # file=stderr)
+                    # break
+                # self.stream.send(json.dumps(event, indent=indent))
+                # if not self._skip_sleep:
+                    # self._dtstamp += timedelta(seconds=random() * 60/epm)
+        # except KeyboardInterrupt:
+            # print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
+                  # file=stderr)
 
     def create_events(self) -> dict:
         """
@@ -171,7 +191,7 @@ class EventGenerator():
         to process the data if available.
         """
         if not self._state_table:
-            self._reset_state_table()
+            self.reset_state_table()
 
         while self._state_table:
             sindex = randint(0, len(self._state_table)-1)
@@ -182,13 +202,12 @@ class EventGenerator():
             event = self._state_table[sindex]['events'][eindex]['event']
 
             if self._dtstamp and self._tzobject:
-                event_time = self._dtstamp.astimezone(self.timezone).isoformat()
+                event_time = self._dtstamp.astimezone(self._timezone).isoformat()
             elif self._dtstamp:
                 event_time = self._dtstamp.isoformat()
             else:
-                event_time = datetime.now(self.timezone).isoformat()
+                event_time = datetime.now(self._timezone).isoformat()
 
-            self._skip_sleep = event.group_up
             self._total_count += 1
             yield event.process(pindex, time=event_time)
 
@@ -199,62 +218,80 @@ class EventGenerator():
         print(f"Event limit reached.  {self._total_count} in total generated",
               file=stderr)
 
-    @property
-    def first_events(self) -> list:
+    @classmethod
+    def set_first_events(cls, events: list, *args) -> None:
         """
         View the first event, or use a statement to set the event.
         """
-        return self._events
-
-    @first_events.setter
-    def first_events(self, events: list) -> None:
         if isinstance(events, Event):
-            self._events = [events]
+            cls._events = [events]
         elif all((isinstance(event, Event) for event in events)):
-            self._events = events
+            cls._events = events
         else:
             raise TypeError("Events must be only Event Type instances")
 
-        self._reset_state_table()
+    @classmethod
+    def set_scheduled_events(cls, events: list) -> None:
+        if isinstance(events, Event):
+            cls._scheduled.append(events)
+        elif all((isinstance(event, Event) for event in events)):
+            cls._scheduled.extend(events)
+        else:
+            raise TypeError("Events must be only Event Type instances")
 
-    async def live_stream(self, epm: int = 60, indent: int = None) -> None:
+    @classmethod
+    def set_stream(cls, stream: Stream):
+        if not hasattr(stream, 'send') and not callable(stream.send):
+            msg = "Stream must have a callable 'send' method"
+            raise NotImplementedError(msg)
+        cls._stream = stream
+
+    @classmethod
+    def set_timezone(cls, offset: int):
+        """
+        Timezone offset used for the event time.  Set between -24 and 24,
+        0 for UTC or None for local time.
+        """
+        if isinstance(offset, int):
+            try:
+                cls._timezone = timezone(timedelta(hours=offset))
+            except ValueError:
+                print("WARNING: Offset must be between -24 and 24 hours",
+                      file=stderr)
+        else:
+            cls._timezone = None
+
+    async def random(self, indent: int = None) -> None:
         """
         Produces a live stream of randomly timed events. Events per minute can
         be adjust, and if the JSON should have indentation of num spaces
         """
         self._dtstamp = None
-        for event in self.create_events():
-            self.stream.send(json.dumps(event, indent=indent))
-            if not self._skip_sleep:
-                await asyncio.sleep(random() * 60/epm)
+        for event, delay, deliver in self.create_events():
+            if deliver:
+                self._stream.send(json.dumps(event, indent=indent))
+            if delay:
+                await asyncio.sleep(delay)
 
-    @property
-    def scheduled_events(self) -> list:
+    def reset_state_table(self) -> None:
         """
-        View the first event, or use a statement to set the event.
+        Resets the state table used, based on the first events set.
         """
-        return self._scheduled
+        self._state_table = [
+            {
+                'pindex': index,
+                'events': [
+                    {
+                        'remain': event.limit,
+                        'event': event
+                    } for event in self._events
+                ]
+            }
+            for index, _ in enumerate(entries)
+        ]
+        self._total_count = 0
 
-    @scheduled_events.setter
-    def scheduled_events(self, events: list) -> None:
-        if isinstance(events, Event):
-            self._scheduled.append(events)
-        elif all((isinstance(event, Event) for event in events)):
-            self._scheduled.extend(events)
-        else:
-            raise TypeError("Events must be only Event Type instances")
-
-    @scheduled_events.deleter
-    def scheduled_events(self, events: list) -> None:
-        if isinstance(events, list):
-            for event in events:
-                if event in self.scheduled_events:
-                    self.scheduled_events.remove(event)
-        else:
-            if events in self.scheduled_events:
-                self.scheduled_events.remove(events)
-
-    async def schedule(self):
+    async def scheduler(self):
         """
         Produces a live stream of timed events.
         """
@@ -270,53 +307,16 @@ class EventGenerator():
                 for event in self._scheduled:
                     scheduled_time = event._croniter.get_current(datetime)
                     if current_time >= scheduled_time:
-                        result = event.process(index,
-                                               profile,
-                                               time=current_time.isoformat())
-                        if result:
-                            self.stream.send(result)
+                        event, delay, deliver = event.process(
+                            index,
+                            profile,
+                            time=current_time.isoformat())
+                        if deliver:
+                            self._stream.send(event)
                             self._total_count += 1
                         if (index + 1) == len(entries):
                             event._croniter.get_next()
             await asyncio.sleep(60)
-
-    def batch(self,
-              start: datetime,
-              finish: datetime,
-              epm: int = 60,
-              indent: int = None) -> None:
-        """
-        Produces a batch of randomly timed events. Events per minute can
-        be adjust, and if the JSON should have indentation of num spaces.
-        """
-        self._dtstamp = start
-        try:
-            for event in self.create_events():
-                if self._dtstamp >= finish:
-                    print(f"Finish time reached.  {self._total_count} in total generated.",
-                          file=stderr)
-                    break
-                self.stream.send(json.dumps(event, indent=indent))
-                if not self._skip_sleep:
-                    self._dtstamp += timedelta(seconds=random() * 60/epm)
-        except KeyboardInterrupt:
-            print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
-                  file=stderr)
-
-    @classmethod
-    def set_timezone(cls, offset: int):
-        """
-        Timezone offset used for the event time.  Set between -24 and 24,
-        0 for UTC or None for local time.
-        """
-        if isinstance(offset, int):
-            try:
-                cls.timezone = timezone(timedelta(hours=offset))
-            except ValueError:
-                print("WARNING: Offset must be between -24 and 24 hours",
-                      file=stderr)
-        else:
-            cls.timezone = None
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
         remain = self._state_table[sindex]['events'][eindex]['remain']
@@ -336,18 +336,3 @@ class EventGenerator():
 
         if not self._state_table[sindex]['events']:
             del self._state_table[sindex]
-
-    def _reset_state_table(self) -> None:
-        self._state_table = [
-            {
-                'pindex': index,
-                'events': [
-                    {
-                        'remain': event.limit,
-                        'event': event
-                    } for event in self.first_events
-                ]
-            }
-            for index, _ in enumerate(entries)
-        ]
-        self._total_count = 0

@@ -2,9 +2,9 @@
 An example of Event creation.
 """
 
-from faker_events import Event
+from faker_events import Event, EventGenerator
 
-example_event = {
+structure = {
     'event_time': '',
     'type': 'example',
     'event_id': '',
@@ -14,7 +14,7 @@ example_event = {
 }
 
 
-def _profiler_example(event, profile: dict) -> dict:
+def profiler_example(event, profile: dict) -> dict:
     return {
         'event_time': event.time,
         'event_id': event.id,
@@ -24,4 +24,5 @@ def _profiler_example(event, profile: dict) -> dict:
     }
 
 
-example = Event(example_event, _profiler_example, 10)
+event = Event(structure, profiler_example, 10)
+EventGenerator.set_first_events(event)

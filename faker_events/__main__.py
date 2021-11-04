@@ -42,12 +42,10 @@ async def main():
     'python -m faker_events'
     """
 
-    event_generator.first_events = faker_events.example.example
+    random = asyncio.create_task(event_generator.random())
+    asyncio.create_task(event_generator.scheduler())
 
-    live_stream = asyncio.create_task(event_generator.live_stream())
-    asyncio.create_task(event_generator.schedule())
-
-    await live_stream
+    await random
 
 try:
     asyncio.run(main())
