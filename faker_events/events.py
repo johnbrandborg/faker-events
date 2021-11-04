@@ -7,35 +7,14 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from hashlib import md5
 import json
-from random import choice, randint, random
+from random import randint, random
 from sys import stderr
-from types import SimpleNamespace
 
 from croniter import croniter
-from faker import Faker
 from .handlers import Stream
+from .profiles import entries
 
 __all__ = ['Event', 'EventGenerator']
-
-
-example_event = {
-    'event_time': '',
-    'type': 'example',
-    'event_id': '',
-    'user_id': '',
-    'first_name': '',
-    'last_name': ''
-}
-
-
-def profiler_example(event, profile: dict) -> dict:
-    return {
-        'event_time': event.time,
-        'event_id': event.id,
-        'user_id': profile.id,
-        'first_name': profile.first_name,
-        'last_name': profile.last_name
-    }
 
 
 class Event():
@@ -58,8 +37,11 @@ class Event():
         group_up: bool
             If set to true the next event will occur at the same time when
             using the batch or live_stream methods of the generator.
+        cron: str
+            If the event is to be set as a scheduled event, the timing the
+            event should occur is defined using cron syntax.
     """
-    _events_data = {}
+    _event_store = {}
 
     def __init__(self,
                  data: dict,
@@ -97,14 +79,14 @@ class Event():
         """
         The persistant Event Data for all the of the profiles is cleared.
         """
-        cls._events_data.clear()
+        cls._event_store.clear()
 
     @classmethod
     def _get_data(cls, template):
         dict_hash = md5(repr(sorted(template.items())).encode()).hexdigest()
-        if dict_hash not in cls._events_data:
-            cls._events_data[dict_hash] = {"id": 0, "template": template}
-        return cls._events_data[dict_hash]
+        if dict_hash not in cls._event_store:
+            cls._event_store[dict_hash] = {"id": 0, "template": template}
+        return cls._event_store[dict_hash]
 
     @property
     def next(self):
@@ -126,7 +108,7 @@ class Event():
         else:
             raise TypeError("Events must be only Event Type instances")
 
-    def process(self, index=0, profile=None, time="") -> dict:
+    def process(self, index=0, time="") -> dict:
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
         self._data['id'] += 1
@@ -136,13 +118,13 @@ class Event():
 
         if callable(self.profiler):
             try:
-                returned = self.profiler(self, profile)
+                returned = self.profiler(self, entries[index])
             except AttributeError as err:
                 print(f"ERROR: Please check your profiler function: {err}",
                       file=stderr)
                 return
             if returned is None:
-                return returned
+                return None
             else:
                 self._update_values(self.data, returned)
         return self.data
@@ -167,51 +149,20 @@ class EventGenerator():
 
     Parameters
     ----------
-        num_profiles: int
-            The number of times to process the event
         stream: faker_events.Stream
             Stream handler to use for sending messages
-        profiles_file: str
-            Creates and Uses a file for persistant profiles
-        fake: Faker
-            Customised Faker instance otherise one is created
     """
-    profiles = []
 
-    def __init__(self,
-                 num_profiles: int = 10,
-                 stream: Stream = None,
-                 profiles_file: str = None,
-                 fake: Faker = None):
-        self.num_profiles = int(num_profiles)
+    timezone = None
+
+    def __init__(self, stream: Stream = None):
         self.stream = stream if stream else Stream()
-        self.profiles_file = profiles_file
-        self.fake = fake if fake and isinstance(fake, Faker) else Faker()
-        self.first_events = Event(example_event, profiler_example, 10)
+        self._events = []
+        self._scheduled = []
         self._dtstamp = None
-        self._tzobject = None
         self._state_table = []
         self._total_count = 0
-        self._scheduled = []
 
-        if isinstance(self.profiles_file, str):
-            try:
-                with open(self.profiles_file) as file:
-                    profiles_dicts = json.loads(file.read())
-                    self.profiles = [
-                        SimpleNamespace(**profiles)
-                        for index, profiles in enumerate(profiles_dicts)
-                        if index < num_profiles
-                    ]
-            except FileNotFoundError:
-                self.create_profiles()
-                self.write_profiles()
-            if num_profiles > len(self.profiles):
-                print("The number of profile requested exceeds the profiles "
-                      "file. Consider recreating and writing the profiles",
-                      file=stderr)
-        else:
-            self.create_profiles()
         Event.clear()
 
     def create_events(self) -> dict:
@@ -229,7 +180,6 @@ class EventGenerator():
 
             remain = self._state_table[sindex]['events'][eindex]['remain']
             event = self._state_table[sindex]['events'][eindex]['event']
-            selected_profile = self.profiles[pindex]
 
             if self._dtstamp and self._tzobject:
                 event_time = self._dtstamp.astimezone(self.timezone).isoformat()
@@ -240,7 +190,7 @@ class EventGenerator():
 
             self._skip_sleep = event.group_up
             self._total_count += 1
-            yield event.process(pindex, selected_profile, time=event_time)
+            yield event.process(pindex, time=event_time)
 
             if remain > 0 and not remain < 0:
                 self._state_table[sindex]['events'][eindex]['remain'] -= 1
@@ -248,71 +198,6 @@ class EventGenerator():
 
         print(f"Event limit reached.  {self._total_count} in total generated",
               file=stderr)
-
-    def create_profiles(self) -> None:
-        """
-        Creates the fake profiles that will be used for event creation.
-        """
-        result = []
-
-        for identification in range(self.num_profiles):
-            gender = choice(('male', 'female'))
-
-            if gender == 'female':
-                first_name = self.fake.first_name_female()
-                middle_name = self.fake.first_name_female()
-                prefix_name = self.fake.prefix_female()
-                suffix_name = self.fake.suffix_female()
-            else:
-                first_name = self.fake.first_name_male()
-                middle_name = self.fake.first_name_male()
-                prefix_name = self.fake.prefix_male()
-                suffix_name = self.fake.suffix_male()
-
-            last_name = self.fake.last_name()
-            address = '{{building_number}}|{{street_name}}|{{state_abbr}}' \
-                      '|{{postcode}}|{{city}}'
-            address1 = self.fake.parse(address).split('|')
-            profile = {
-                'id': identification + 1000,
-                'uuid': self.fake.uuid4(),
-                'username': self.fake.user_name(),
-                'gender': gender,
-                'first_name': first_name,
-                'middle_name': middle_name,
-                'last_name': last_name,
-                'prefix_name': prefix_name,
-                'suffix_name': suffix_name,
-                'birthdate': self.fake.date_of_birth(minimum_age=18,
-                                                     maximum_age=80)
-                            .isoformat(),
-                'blood_group': (choice(["A", "B", "AB", "O"]) +
-                                choice(["+", "-"])),
-                'email': f'{first_name}.{last_name}@{self.fake.domain_name()}',
-                'employer': self.fake.company(),
-                'job': self.fake.job(),
-                'full_address1': ' '.join(address1),
-                'building_number1': address1[0],
-                'street_name1': address1[1].split(' ')[0],
-                'street_suffix1': address1[1].split(' ')[1],
-                'state1': address1[2],
-                'postcode1': address1[3],
-                'city1': address1[4],
-                'phone1': self.fake.phone_number(),
-                'full_address2': ' '.join(address1),
-                'building_number2': address1[0],
-                'street_name2': address1[1].split(' ')[0],
-                'street_suffix2': address1[1].split(' ')[1],
-                'state2': address1[2],
-                'postcode2': address1[3],
-                'city2': address1[4],
-                'phone2': self.fake.phone_number(),
-                'driver_license': self.fake.bothify('?#####'),
-                'license_plate': self.fake.license_plate(),
-            }
-
-            result.append(SimpleNamespace(**profile))
-        self.profiles = result
 
     @property
     def first_events(self) -> list:
@@ -381,7 +266,7 @@ class EventGenerator():
 
         while True:
             current_time = datetime.now()
-            for index, profile in enumerate(self.profiles):
+            for index, profile in enumerate(entries):
                 for event in self._scheduled:
                     scheduled_time = event._croniter.get_current(datetime)
                     if current_time >= scheduled_time:
@@ -391,7 +276,7 @@ class EventGenerator():
                         if result:
                             self.stream.send(result)
                             self._total_count += 1
-                        if (index + 1) == len(self.profiles):
+                        if (index + 1) == len(entries):
                             event._croniter.get_next()
             await asyncio.sleep(60)
 
@@ -418,50 +303,20 @@ class EventGenerator():
             print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
                   file=stderr)
 
-    def write_profiles(self):
-        """
-        Writes the profile data created in the Event Generator to file to file.
-        """
-        if self.profiles_file:
-            with open(self.profiles_file, 'w') as file:
-                profiles_dicts = [vars(item) for item in self.profiles]
-                file.write(json.dumps(profiles_dicts))
-        else:
-            print("Unable to write file.  No profiles_file value was set.")
-
-    @property
-    def timezone(self):
+    @classmethod
+    def set_timezone(cls, offset: int):
         """
         Timezone offset used for the event time.  Set between -24 and 24,
         0 for UTC or None for local time.
         """
-        return self._tzobject
-
-    @timezone.setter
-    def timezone(self, offset: int):
         if isinstance(offset, int):
             try:
-                self._tzobject = timezone(timedelta(hours=offset))
+                cls.timezone = timezone(timedelta(hours=offset))
             except ValueError:
                 print("WARNING: Offset must be between -24 and 24 hours",
                       file=stderr)
         else:
-            self._tzobject = None
-
-    def _reset_state_table(self) -> None:
-        self._state_table = [
-            {
-                'pindex': index,
-                'events': [
-                    {
-                        'remain': event.limit,
-                        'event': event
-                    } for event in self.first_events
-                ]
-            }
-            for index, _ in enumerate(self.profiles)
-        ]
-        self._total_count = 0
+            cls.timezone = None
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
         remain = self._state_table[sindex]['events'][eindex]['remain']
@@ -481,3 +336,18 @@ class EventGenerator():
 
         if not self._state_table[sindex]['events']:
             del self._state_table[sindex]
+
+    def _reset_state_table(self) -> None:
+        self._state_table = [
+            {
+                'pindex': index,
+                'events': [
+                    {
+                        'remain': event.limit,
+                        'event': event
+                    } for event in self.first_events
+                ]
+            }
+            for index, _ in enumerate(entries)
+        ]
+        self._total_count = 0
