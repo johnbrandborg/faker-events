@@ -2,6 +2,7 @@
 Stream handlers for sending messages
 """
 
+import json
 
 __all__ = ['Stream']
 
@@ -33,7 +34,7 @@ class Stream():
         self.key = key
 
         if stype == 'console':
-            self.send = print
+            self.send = lambda message: print(json.dumps(message))
         elif stype == 'kafka':
             self._setup_kafka()
         elif stype == 'kinesis':
@@ -52,7 +53,8 @@ class Stream():
         producer = KafkaProducer(bootstrap_servers=[self.host])
 
         def send(message):
-            producer.send(topic=self.name, value=message.encode())
+            formatted = json.dumps(message).encode()
+            producer.send(topic=self.name, value=formatted)
         self.send = send
 
     def _setup_kinesis(self) -> object:
@@ -66,9 +68,10 @@ class Stream():
         kinesis = boto3.client('kinesis')
 
         def send(message):
+            formatted = json.dumps(message).encode()
             kinesis.put_record(
                 StreamName=self.name,
-                Data=message.encode(),
+                Data=formatted,
                 PartitionKey=self.key,
             )
         self.send = send

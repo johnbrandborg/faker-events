@@ -6,7 +6,6 @@ import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from hashlib import md5
-import json
 from random import randint, random
 from sys import stderr
 
@@ -126,10 +125,9 @@ class Event():
             if isinstance(returned, dict):
                 self._update_values(self.data, returned)
             elif returned == 'skip':
-                return None, 0, False
+                return None, False
 
-        delay = None if self.group_up else random() * 60/self.epm
-        return self.data, delay, True
+        return self.data, True
 
     @staticmethod
     def _update_values(dict1: dict, dict2: dict) -> None:
@@ -156,9 +154,9 @@ class EventGenerator():
     _timezone = None
 
     def __init__(self):
+        self._total_count = 0
         self._dtstamp = None
         self._state_table = []
-        self._total_count = 0
 
         Event.clear()
 
@@ -201,15 +199,15 @@ class EventGenerator():
             remain = self._state_table[sindex]['events'][eindex]['remain']
             event = self._state_table[sindex]['events'][eindex]['event']
 
-            if self._dtstamp and self._tzobject:
+            if self._dtstamp and self._timezone:
                 event_time = self._dtstamp.astimezone(self._timezone).isoformat()
             elif self._dtstamp:
                 event_time = self._dtstamp.isoformat()
             else:
                 event_time = datetime.now(self._timezone).isoformat()
 
-            self._total_count += 1
-            yield event.process(pindex, time=event_time)
+            delay = None if event.group_up else random() * 60/event.epm
+            yield (*event.process(pindex, time=event_time), delay)
 
             if remain > 0 and not remain < 0:
                 self._state_table[sindex]['events'][eindex]['remain'] -= 1
@@ -221,7 +219,7 @@ class EventGenerator():
     @classmethod
     def set_first_events(cls, events: list, *args) -> None:
         """
-        View the first event, or use a statement to set the event.
+        Set the first events that will be placed into the state table.
         """
         if isinstance(events, Event):
             cls._events = [events]
@@ -232,6 +230,9 @@ class EventGenerator():
 
     @classmethod
     def set_scheduled_events(cls, events: list) -> None:
+        """
+        Set the scheduled events that will be processed using Cron syntax.
+        """
         if isinstance(events, Event):
             cls._scheduled.append(events)
         elif all((isinstance(event, Event) for event in events)):
@@ -240,17 +241,20 @@ class EventGenerator():
             raise TypeError("Events must be only Event Type instances")
 
     @classmethod
-    def set_stream(cls, stream: Stream):
+    def set_stream(cls, stream: Stream) -> None:
+        """
+        Set the Stream to be used for delivering the event.
+        """
         if not hasattr(stream, 'send') and not callable(stream.send):
             msg = "Stream must have a callable 'send' method"
             raise NotImplementedError(msg)
         cls._stream = stream
 
     @classmethod
-    def set_timezone(cls, offset: int):
+    def set_timezone(cls, offset: int) -> None:
         """
-        Timezone offset used for the event time.  Set between -24 and 24,
-        0 for UTC or None for local time.
+        Set the Timezone offset used for the event time.  Set between -24 and
+        24, 0 for UTC or None for local time.
         """
         if isinstance(offset, int):
             try:
@@ -261,15 +265,15 @@ class EventGenerator():
         else:
             cls._timezone = None
 
-    async def random(self, indent: int = None) -> None:
+    async def random(self) -> None:
         """
-        Produces a live stream of randomly timed events. Events per minute can
-        be adjust, and if the JSON should have indentation of num spaces
+        Produces a live stream of randomly timed events.
         """
         self._dtstamp = None
-        for event, delay, deliver in self.create_events():
+        for response, deliver, delay in self.create_events():
             if deliver:
-                self._stream.send(json.dumps(event, indent=indent))
+                self._stream.send(response)
+                self._total_count += 1
             if delay:
                 await asyncio.sleep(delay)
 
@@ -293,8 +297,9 @@ class EventGenerator():
 
     async def scheduler(self):
         """
-        Produces a live stream of timed events.
+        Produces timed events that a based on all profiles.
         """
+        entries_count = len(entries)
         self._dtbase = datetime.now()
         await asyncio.sleep((60 - self._dtbase.second) +
                             ((100000 - self._dtbase.microsecond) / 1000000))
@@ -303,18 +308,20 @@ class EventGenerator():
 
         while True:
             current_time = datetime.now()
-            for index, profile in enumerate(entries):
+            for index in range(entries_count):
                 for event in self._scheduled:
                     scheduled_time = event._croniter.get_current(datetime)
+
                     if current_time >= scheduled_time:
-                        event, delay, deliver = event.process(
+                        response, deliver = event.process(
                             index,
-                            profile,
-                            time=current_time.isoformat())
+                            current_time.isoformat())
+
                         if deliver:
-                            self._stream.send(event)
+                            self._stream.send(response)
                             self._total_count += 1
-                        if (index + 1) == len(entries):
+
+                        if index + 1 == entries_count:
                             event._croniter.get_next()
             await asyncio.sleep(60)
 

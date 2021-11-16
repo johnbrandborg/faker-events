@@ -6,10 +6,13 @@ Runs the Example EventType
 
 from argparse import ArgumentParser
 import asyncio
+import importlib
+import os
+import sys
+
 from faker_events import EventGenerator
 import faker_events.profiles
-import importlib
-from sys import stderr
+
 
 parser = ArgumentParser(prog="python -m faker_events",
                         description="Faker Events creates JSON events, and"
@@ -30,7 +33,13 @@ faker_events.profiles.load(args.num_profiles)
 event_generator = EventGenerator()
 
 if args.script:
-    faker_events = importlib.import_module(args.script)
+    try:
+        sys.path.append(os.getcwd())
+        module_path = args.script.rstrip(".py").replace("/", ".")
+        event_script = importlib.import_module(module_path)
+    except ModuleNotFoundError:
+        print(f"No event module named '{args.script}'", file=sys.stderr)
+        sys.exit(1)
 else:
     import faker_events.example
 
@@ -42,13 +51,19 @@ async def main():
     'python -m faker_events'
     """
 
-    random = asyncio.create_task(event_generator.random())
-    asyncio.create_task(event_generator.scheduler())
+    tasks = []
 
-    await random
+    if EventGenerator._scheduled:
+        tasks.append(asyncio.create_task(event_generator.scheduler()))
+
+    if EventGenerator._events:
+        tasks.append(asyncio.create_task(event_generator.random()))
+
+    for task in tasks:
+        await task
 
 try:
     asyncio.run(main())
 except KeyboardInterrupt:
-    print(f"\nStopping Event Stream.  {event_generator._total_count} in total generated.",
-          file=stderr)
+    print(f"\nStopping Event Stream.  {event_generator._total_count} in",
+          "total generated.", file=sys.stderr)
