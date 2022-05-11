@@ -24,7 +24,7 @@ Targets\n\
  test:		Perform unit testing on the source code\n\
  lint:		Perform quality checks on the source code\n\
  patch:		Creates an incremented Patch Tag\n\
- develop:		Installs all requirements and testing requirements\n\
+ develop:	Installs all requirements and testing requirements\n\
  clean:		Removes built Python Packages and cached byte code\n\
  help:		Displays the help menu with all the targets\n";
 

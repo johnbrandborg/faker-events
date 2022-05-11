@@ -5,7 +5,6 @@ Runs the Example EventType
 """
 
 from argparse import ArgumentParser
-import asyncio
 import importlib
 import os
 import sys
@@ -44,26 +43,8 @@ else:
     import faker_events.example
 
 
-async def main():
-    """
-    Main Function if run as a module.  Example Events are generated to console.
-
-    'python -m faker_events'
-    """
-
-    tasks = []
-
-    if EventGenerator._scheduled:
-        tasks.append(asyncio.create_task(event_generator.scheduler()))
-
-    if EventGenerator._events:
-        tasks.append(asyncio.create_task(event_generator.random()))
-
-    for task in tasks:
-        await task
-
 try:
-    asyncio.run(main())
+    event_generator.start()
 except KeyboardInterrupt:
     print(f"\nStopping Event Stream.  {event_generator._total_count} in",
           "total generated.", file=sys.stderr)

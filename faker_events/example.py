@@ -34,7 +34,7 @@ def make_payment(event, profile: dict):
 
 
 def status_update(event, profile: dict):
-    if event.data['payment'] > 400:
+    if event.data['payment'] > 100 and event.data['status'] != 'big spender':
         event.data['status'] = 'big spender'
     else:
         return 'skip'
@@ -42,11 +42,15 @@ def status_update(event, profile: dict):
 
 # Random Events
 new_account = Event(structure, open_account, 1)
-payment = Event(structure, make_payment, 10)
+payment = Event(structure, make_payment, 2)
 new_account >> payment
 
+# from datetime import datetime, timedelta
+# s = datetime(2019, 1, 1)
+# f = s + timedelta(seconds=62)
+# EventGenerator.batch(s, f)
 EventGenerator.set_first_events(new_account)
 
 # Scheduled Events
-status_event = Event(structure, status_update, 1, cron="*/1 * * * *")
+status_event = Event(structure, status_update, 2, cron="*/1 * * * *")
 EventGenerator.set_scheduled_events(status_event)

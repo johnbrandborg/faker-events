@@ -150,38 +150,23 @@ class EventGenerator():
 
     _stream = Stream()
     _events = []
+    _dtstamp = None
     _scheduled = []
     _timezone = None
 
     def __init__(self):
         self._total_count = 0
-        self._dtstamp = None
         self._state_table = []
-
         Event.clear()
 
-    # def batch(self,
-              # start: datetime,
-              # finish: datetime,
-              # epm: int = 60,
-              # indent: int = None) -> None:
-        # """
-        # Produces a batch of randomly timed events. Events per minute can
-        # be adjust, and if the JSON should have indentation of num spaces.
-        # """
-        # self._dtstamp = start
-        # try:
-            # for event in self.create_events():
-                # if self._dtstamp >= finish:
-                    # print(f"Finish time reached.  {self._total_count} in total generated.",
-                          # file=stderr)
-                    # break
-                # self.stream.send(json.dumps(event, indent=indent))
-                # if not self._skip_sleep:
-                    # self._dtstamp += timedelta(seconds=random() * 60/epm)
-        # except KeyboardInterrupt:
-            # print(f"\nStopping Event Batch.  {self._total_count} in total generated.",
-                  # file=stderr)
+    @classmethod
+    def batch(cls, start: datetime, finish: datetime) -> None:
+        """
+        Produces a batch of randomly timed events from the given start and
+        finish datetime positions.
+        """
+        cls._dtstamp = start
+        cls._dtcutoff = finish
 
     def create_events(self) -> dict:
         """
@@ -189,7 +174,7 @@ class EventGenerator():
         to process the data if available.
         """
         if not self._state_table:
-            self.reset_state_table()
+            self._reset_state_table()
 
         while self._state_table:
             sindex = randint(0, len(self._state_table)-1)
@@ -265,19 +250,48 @@ class EventGenerator():
         else:
             cls._timezone = None
 
-    async def random(self) -> None:
+    def start(self):
+        if self._dtstamp:
+            print('Starting Batch', file=stderr)
+            self._batch_stream()
+        else:
+            print('Starting Live Stream', file=stderr)
+            asyncio.run(self._live_stream())
+
+    def _batch_stream(self):
+        raise NotImplementedError("Coming soon")
+
+        # if delay and self._dtstamp:
+            # if self._dtstamp >= self._dtcutoff:
+                # print(f"Random limit reached.  {self._total_count} in total generated",
+                      # file=stderr)
+                # return
+            # self._dtstamp += timedelta(seconds=delay)
+        # else:
+
+    async def _live_stream(self):
+        tasks = []
+        if EventGenerator._scheduled:
+            tasks.append(asyncio.create_task(self._scheduler()))
+
+        if EventGenerator._events:
+            tasks.append(asyncio.create_task(self._random()))
+
+        for task in tasks:
+            await task
+
+    async def _random(self) -> None:
         """
-        Produces a live stream of randomly timed events.
+        Produces randomly timed events on selected profiles.
         """
-        self._dtstamp = None
         for response, deliver, delay in self.create_events():
             if deliver:
                 self._stream.send(response)
                 self._total_count += 1
-            if delay:
-                await asyncio.sleep(delay)
 
-    def reset_state_table(self) -> None:
+            await asyncio.sleep(delay)
+
+    def _reset_state_table(self) -> None:
         """
         Resets the state table used, based on the first events set.
         """
@@ -295,35 +309,48 @@ class EventGenerator():
         ]
         self._total_count = 0
 
-    async def scheduler(self):
+    async def _scheduler(self):
         """
         Produces timed events that a based on all profiles.
         """
         entries_count = len(entries)
+
+        # Syncronize to the next 0 seconds on the minute
         self._dtbase = datetime.now()
         await asyncio.sleep((60 - self._dtbase.second) +
                             ((100000 - self._dtbase.microsecond) / 1000000))
+
+        schedule = []
         for event in self._scheduled:
             event._croniter = croniter(event.cron, self._dtbase)
+            schedule.append({'object': event, 'remain':  event.limit})
 
-        while True:
+        while schedule:
             current_time = datetime.now()
             for index in range(entries_count):
-                for event in self._scheduled:
-                    scheduled_time = event._croniter.get_current(datetime)
+                for event in schedule:
+                    scheduled_time = event['object']._croniter.get_current(datetime)
 
                     if current_time >= scheduled_time:
-                        response, deliver = event.process(
+                        response, deliver = event['object'].process(
                             index,
                             current_time.isoformat())
-
                         if deliver:
                             self._stream.send(response)
                             self._total_count += 1
-
                         if index + 1 == entries_count:
-                            event._croniter.get_next()
-            await asyncio.sleep(60)
+                            event['object']._croniter.get_next()
+
+                            if event['object'].limit:
+                                event['remain'] -= 1
+                                if event['remain'] <= 0:
+                                    schedule.remove(event)
+
+            if schedule:
+                await asyncio.sleep(60)
+
+        print(f"Schedule limit reached.  {self._total_count} in total generated",
+              file=stderr)
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
         remain = self._state_table[sindex]['events'][eindex]['remain']
