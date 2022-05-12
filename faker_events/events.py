@@ -112,6 +112,11 @@ class Event():
             raise TypeError("Events must be only Event Type instances")
 
     def process(self, index=0, time="") -> tuple:
+        """
+        Passes the event and profile to the profiler function.  The Profiler
+        function can update the event itself, or return a new Dict which is
+        then applied against the event.
+        """
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
         self._data['id'] += 1
@@ -182,7 +187,7 @@ class EventGenerator():
             eindex = randint(0, len(self._state_table[sindex]['events'])-1)
 
             remain = self._state_table[sindex]['events'][eindex]['remain']
-            event = self._state_table[sindex]['events'][eindex]['event']
+            event = self._state_table[sindex]['events'][eindex]['object']
 
             if self._dtstamp and self._timezone:
                 event_time = self._dtstamp.astimezone(self._timezone).isoformat()
@@ -251,6 +256,10 @@ class EventGenerator():
             cls._timezone = None
 
     def start(self):
+        """
+        Starts the Event Generator in the default Live Stream, or Batch if the
+        batch method has been called.
+        """
         if self._dtstamp:
             print('Starting Batch', file=stderr)
             self._batch_stream()
@@ -259,6 +268,10 @@ class EventGenerator():
             asyncio.run(self._live_stream())
 
     def _batch_stream(self):
+        """
+        Process both the random and scheduled events without sleeping. This
+        allows for data to be producted quickly.
+        """
         raise NotImplementedError("Coming soon")
 
         # if delay and self._dtstamp:
@@ -270,6 +283,10 @@ class EventGenerator():
         # else:
 
     async def _live_stream(self):
+        """
+        Runs the Event loop necessary to process both random, and scheduled
+        Events placed onto the Event Generator.
+        """
         tasks = []
         if EventGenerator._scheduled:
             tasks.append(asyncio.create_task(self._scheduler()))
@@ -282,7 +299,9 @@ class EventGenerator():
 
     async def _random(self) -> None:
         """
-        Produces randomly timed events on selected profiles.
+        Produces randomly timed events on selected profiles.  This method
+        effectively has the create_events method perform the state, while
+        this method uses the stream handler and performs the random sleeps.
         """
         for response, deliver, delay in self.create_events():
             if deliver:
@@ -293,7 +312,9 @@ class EventGenerator():
 
     def _reset_state_table(self) -> None:
         """
-        Resets the state table used, based on the first events set.
+        Resets the state table used, based on the first events set on the
+        EventGenerator.  If Faker Events is used interactively in the console
+        then multiple runs are possible.
         """
         self._state_table = [
             {
@@ -301,7 +322,7 @@ class EventGenerator():
                 'events': [
                     {
                         'remain': event.limit,
-                        'event': event
+                        'object': event
                     } for event in self._events
                 ]
             }
@@ -311,14 +332,15 @@ class EventGenerator():
 
     async def _scheduler(self):
         """
-        Produces timed events that a based on all profiles.
+        Produces timed events that a based on all profiles.  The scheduler
+        creates an independent state stable to process, because all scheduler
+        events are processed against all profiles, rather than individually.
         """
         entries_count = len(entries)
 
         # Syncronize to the next 0 seconds on the minute
         self._dtbase = datetime.now()
-        await asyncio.sleep((60 - self._dtbase.second) +
-                            ((100000 - self._dtbase.microsecond) / 1000000))
+        await asyncio.sleep(60 - self._dtbase.second)
 
         schedule = []
         for event in self._scheduled:
@@ -353,15 +375,20 @@ class EventGenerator():
               file=stderr)
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
+        """
+        Updates the state table with new events to be processed if the events
+        has another event to process, and the current event have no more
+        remaining executions.
+        """
         remain = self._state_table[sindex]['events'][eindex]['remain']
-        event = self._state_table[sindex]['events'][eindex]['event']
+        event = self._state_table[sindex]['events'][eindex]['object']
 
         if remain <= 0 and event.next:
             del self._state_table[sindex]['events'][eindex]
             event_record = [
                 {
                     'remain': next_event.limit,
-                    'event': next_event
+                    'object': next_event
                 } for next_event in event.next
             ]
             self._state_table[sindex]['events'].extend(event_record)
