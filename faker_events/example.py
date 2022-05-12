@@ -30,11 +30,13 @@ def open_account(event, profile: dict) -> dict:
 
 
 def make_payment(event, profile: dict):
+    event.data['event_time'] = event.time
     event.data['payment'] += fake.random_number(2)
 
 
 def status_update(event, profile: dict):
     if event.data['payment'] > 100 and event.data['status'] != 'big spender':
+        event.data['event_time'] = event.time
         event.data['status'] = 'big spender'
     else:
         return 'skip'
@@ -45,12 +47,8 @@ new_account = Event(structure, open_account, 1)
 payment = Event(structure, make_payment, 2)
 new_account >> payment
 
-# from datetime import datetime, timedelta
-# s = datetime(2019, 1, 1)
-# f = s + timedelta(seconds=62)
-# EventGenerator.batch(s, f)
 EventGenerator.set_first_events(new_account)
 
 # Scheduled Events
-status_event = Event(structure, status_update, 2, cron="*/1 * * * *")
+status_event = Event(structure, status_update, 1, cron="*/1 * * * *")
 EventGenerator.set_scheduled_events(status_event)

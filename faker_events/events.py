@@ -113,9 +113,12 @@ class Event():
 
     def process(self, index=0, time="") -> tuple:
         """
-        Passes the event and profile to the profiler function.  The Profiler
-        function can update the event itself, or return a new Dict which is
-        then applied against the event.
+        Passes the event and profile data to the profiler function.  The
+        Profiler function can update the event itself, or return a new Dict
+        which is then applied against the event.
+
+        If the string 'skip' is returned by the profiler, in turn the returning
+        tuple indicates that delivery should not occur.
         """
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
@@ -189,9 +192,9 @@ class EventGenerator():
             remain = self._state_table[sindex]['events'][eindex]['remain']
             event = self._state_table[sindex]['events'][eindex]['object']
 
-            if self._dtstamp and self._timezone:
+            if self._dtstamp is not None and self._timezone:
                 event_time = self._dtstamp.astimezone(self._timezone).isoformat()
-            elif self._dtstamp:
+            elif self._dtstamp is not None:
                 event_time = self._dtstamp.isoformat()
             else:
                 event_time = datetime.now(self._timezone).isoformat()
@@ -257,11 +260,11 @@ class EventGenerator():
 
     def start(self):
         """
-        Starts the Event Generator in the default Live Stream, or Batch if the
-        batch method has been called.
+        Starts the Event Generator in the default Live Stream, or Batch Steam
+        if the batch method has been called.
         """
         if self._dtstamp:
-            print('Starting Batch', file=stderr)
+            print('Starting Batch Steam', file=stderr)
             self._batch_stream()
         else:
             print('Starting Live Stream', file=stderr)
@@ -272,20 +275,23 @@ class EventGenerator():
         Process both the random and scheduled events without sleeping. This
         allows for data to be producted quickly.
         """
-        raise NotImplementedError("Coming soon")
+        for response, deliver, delay in self.create_events():
+            if deliver:
+                self._stream.send(response)
+                self._total_count += 1
 
-        # if delay and self._dtstamp:
-            # if self._dtstamp >= self._dtcutoff:
-                # print(f"Random limit reached.  {self._total_count} in total generated",
-                      # file=stderr)
-                # return
-            # self._dtstamp += timedelta(seconds=delay)
-        # else:
+            if self._dtstamp >= self._dtcutoff:
+                print("Batch Steam finish datetime reached.  "
+                      f"{self._total_count} in total generated",
+                      file=stderr)
+                return
+
+            self._dtstamp += timedelta(seconds=delay)
 
     async def _live_stream(self):
         """
-        Runs the Event loop necessary to process both random, and scheduled
-        Events placed onto the Event Generator.
+        Runs the both the random, and scheduled tasks in the Async event loop,
+        that are placed onto the Event Generator.
         """
         tasks = []
         if EventGenerator._scheduled:
