@@ -122,7 +122,7 @@ class Event():
         """
         if index not in self._data:
             self._data[index] = deepcopy(self._data['template'])
-        self._data['id'] += 1
+        self._data['id'] = str(int(self._data['id']) + 1)
         self.data = self._data[index]
         self.time = time
         self.id = self._data['id']
@@ -272,6 +272,8 @@ class EventGenerator():
         Starts the Event Generator in the default Live Stream, or Batch Steam
         if the batch method has been called.
         """
+        self._state_table = None
+
         if self._dtstamp:
             print('Starting Batch Steam', file=stderr)
             self._batch_stream()

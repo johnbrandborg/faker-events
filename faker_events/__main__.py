@@ -18,7 +18,7 @@ parser = ArgumentParser(prog="python -m faker_events",
                                     " can direct them to Data Streams.")
 parser.add_argument("-n", "--nprofiles",
                     type=int,
-                    default=1,
+                    default=10,
                     dest="num_profiles",
                     help="The number of profiles to create")
 parser.add_argument("-p", "--profiles",

@@ -27,7 +27,7 @@ class ProfilesGenerator():
         self.entries = []
 
     def load(self,
-             num_profiles: int = 1,
+             num_profiles: int = 10,
              profiles_file: str = None) -> None:
         """
         Used to Create, Load, and Save profiles.
@@ -88,7 +88,7 @@ class ProfilesGenerator():
                       '|{{postcode}}|{{city}}'
             address1 = fake.parse(address).split('|')
             profile = {
-                'id': identification + 1000,
+                'id': str(identification + 1000),
                 'uuid': fake.uuid4(),
                 'username': fake.user_name(),
                 'gender': gender,

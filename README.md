@@ -7,9 +7,12 @@ Generates Events with formatted fake data for streams. The intention is for
  development and testing purposes without relying on real data.
 
 ## Usage
-Faker Events is a package that doesn't come with a CLI.  This is in part
-due to the Events you create being written in Python as Dictionaries, and
-processed using a function referred to as the profiler.
+Faker Events allows you to create multiple data structures, and events that
+occur randomly or schedule, after which are sent to a data stream or system,
+through the message handler.
+
+The structures can be defined as Python Dictionaries, and processed using a
+function referred to as the profiler.
 
 The Faker package is utilised to generate the data on the profiles.
 Understanding how Faker works is recommended and you can find the documentation
@@ -40,35 +43,33 @@ Set the "Events Per Minute" on the live_stream method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
 minute, but they are random so expect potentially lower rates.
 
-**Standard Output**
-```python
-import faker_events
+If you want to see a demo of this without writing code, run faker_events as a
+ module from the command line.  CTRL-C to stop the event stream.
 
-eg = faker_events.EventGenerator()
-eg.live_stream(epm=120)
+```shell
+make demo
+```
+
+or
+
+```shell
+python3 -m faker_events
 ```
 
 Output
 ```json
-{"event_time": "2021-09-28T14:05:31.520806", "type": "example", "event_id": 1, "user_id": 1008, "first_name": "Cindy", "last_name": "Bernard"}
-{"event_time": "2021-09-28T14:05:31.997151", "type": "example", "event_id": 2, "user_id": 1003, "first_name": "Nicole", "last_name": "Mcneil"}
-{"event_time": "2021-09-28T14:05:32.241834", "type": "example", "event_id": 3, "user_id": 1004, "first_name": "David", "last_name": "Berg"}
-{"event_time": "2021-09-28T14:05:33.135551", "type": "example", "event_id": 4, "user_id": 1007, "first_name": "Kylie", "last_name": "Ortiz"}
-{"event_time": "2021-09-28T14:05:33.265245", "type": "example", "event_id": 5, "user_id": 1006, "first_name": "Steven", "last_name": "Donaldson"}
-{"event_time": "2021-09-28T14:05:34.159739", "type": "example", "event_id": 6, "user_id": 1005, "first_name": "Jennifer", "last_name": "Porter"}
-{"event_time": "2021-09-28T14:05:34.722054", "type": "example", "event_id": 7, "user_id": 1009, "first_name": "Jason", "last_name": "York"}
-{"event_time": "2021-09-28T14:05:35.054572", "type": "example", "event_id": 8, "user_id": 1002, "first_name": "Peter", "last_name": "Elliott"}
-{"event_time": "2021-09-28T14:05:35.613473", "type": "example", "event_id": 9, "user_id": 1000, "first_name": "Tina", "last_name": "Nelson"}
-{"event_time": "2021-09-28T14:05:36.166375", "type": "example", "event_id": 10, "user_id": 1001, "first_name": "Jason", "last_name": "Raymond"}
+Starting Live Stream
+{"event_time": "2022-05-19T22:43:39.683304", "type": "example", "event_id": "1", "user_id": "1009", "first_name": "Brandon", "last_name": "Braun", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:40.291519", "type": "example", "event_id": "2", "user_id": "1002", "first_name": "Jonathan", "last_name": "Keith", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:41.001050", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:41.358616", "type": "example", "event_id": "4", "user_id": "1004", "first_name": "Joseph", "last_name": "Frank", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:42.356265", "type": "example", "event_id": "4", "user_id": "1004", "first_name": "Joseph", "last_name": "Frank", "spent": 71, "status": "normal"}
+{"event_time": "2022-05-19T22:43:42.788833", "type": "example", "event_id": "6", "user_id": "1003", "first_name": "Nathaniel", "last_name": "Garrett", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:43.106967", "type": "example", "event_id": "7", "user_id": "1000", "first_name": "Jeffrey", "last_name": "Owens", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:43.754115", "type": "example", "event_id": "2", "user_id": "1002", "first_name": "Jonathan", "last_name": "Keith", "spent": 77, "status": "normal"}
+{"event_time": "2022-05-19T22:43:44.121750", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 93, "status": "normal"}
 ^C
-Stopping Event Stream.  10 in total generated.
-```
-
-If you want to see a demo of  this without writing code, run faker_events as a
- module from the command line.  CTRL-C to stop the event stream.
-
-```bash
-python -m faker_events
+Stopping Event Stream.  9 in total generated.
 ```
 
 ### Using Stream Handlers

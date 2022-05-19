@@ -36,7 +36,7 @@ def test_generator_profile_creation():
     of attributes, to be used in the profiler functions.
     """
     profiles_generator = ProfilesGenerator()
-    profiles_generator.load()
+    profiles_generator.load(num_profiles=1)
 
     attributes = [
         'id',
@@ -85,7 +85,7 @@ def test_generator_profile_file_read(profile_json, profile_sample):
     mocked_file = mock_open(read_data=profile_json)
     with patch('faker_events.profiles.open', mocked_file) as mopen:
         profiles_generator = ProfilesGenerator()
-        profiles_generator.load(profiles_file='test')
+        profiles_generator.load(num_profiles=1, profiles_file='test')
 
     mopen.assert_called_once_with('test', encoding='utf-8')
     assert profiles_generator.entries == [profile_sample]
@@ -99,7 +99,7 @@ def test_generator_profile_file_create():
 
     with patch('faker_events.profiles.open', mopen):
         profiles_generator = ProfilesGenerator()
-        profiles_generator.load(profiles_file='test')
+        profiles_generator.load(num_profiles=1, profiles_file='test')
 
         mopen.assert_called_with('test', 'w', encoding='utf-8')
 
