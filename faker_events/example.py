@@ -14,7 +14,7 @@ structure = {
     'user_id': '',
     'first_name': '',
     'last_name': '',
-    'payment': 0,
+    'spent': 0,
     'status': 'normal'
 }
 
@@ -31,15 +31,18 @@ def open_account(event, profile: dict) -> dict:
 
 def make_payment(event, profile: dict):
     event.data['event_time'] = event.time
-    event.data['payment'] += fake.random_number(2)
+    event.data['spent'] += fake.random_number(2)
 
 
 def status_update(event, profile: dict):
-    if event.data['payment'] > 100 and event.data['status'] != 'big spender':
-        event.data['event_time'] = event.time
-        event.data['status'] = 'big spender'
-    else:
-        return 'skip'
+    if event.data['spent'] > 100 and event.data['status'] != 'big spender':
+        return {
+            'event_time': event.time,
+            'status': 'big spender'
+        }
+
+    # No Event will be created when if condition is not True
+    return 'skip'
 
 
 # Random Events

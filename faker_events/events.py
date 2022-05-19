@@ -199,7 +199,8 @@ class EventGenerator():
             event = self._state_table[sindex]['events'][eindex]['object']
 
             if self._dtstamp is not None and self._timezone:
-                event_time = self._dtstamp.astimezone(self._timezone).isoformat()
+                event_time = self._dtstamp \
+                                 .astimezone(self._timezone).isoformat()
             elif self._dtstamp is not None:
                 event_time = self._dtstamp.isoformat()
             else:
@@ -365,7 +366,8 @@ class EventGenerator():
             current_time = datetime.now()
             for index in range(entries_count):
                 for event in schedule:
-                    scheduled_time = event['object']._croniter.get_current(datetime)
+                    scheduled_time = event['object']._croniter \
+                                                    .get_current(datetime)
 
                     if current_time >= scheduled_time:
                         response, deliver = event['object'].process(
@@ -386,8 +388,8 @@ class EventGenerator():
             if schedule:
                 await asyncio.sleep(60)
 
-        print(f"Schedule limit reached.  {self._total_count} in total generated",
-              file=stderr)
+        print(f"Schedule limit reached.  {self._total_count} in total "
+              "generated", file=stderr)
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
         """

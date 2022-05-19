@@ -18,7 +18,7 @@ parser = ArgumentParser(prog="python -m faker_events",
                                     " can direct them to Data Streams.")
 parser.add_argument("-n", "--nprofiles",
                     type=int,
-                    default=10,
+                    default=1,
                     dest="num_profiles",
                     help="The number of profiles to create")
 parser.add_argument("-p", "--profiles",
@@ -43,10 +43,10 @@ if args.script:
         module_path = args.script.rstrip(".py").replace("/", ".")
         event_script = importlib.import_module(module_path)
     except ModuleNotFoundError:
-        print(f"No event module named '{args.script}'", file=sys.stderr)
+        print(f"ERROR: No event module named '{args.script}'", file=sys.stderr)
         sys.exit(1)
 else:
-    import faker_events.example
+    import faker_events.example  # noqa
 
 
 try:

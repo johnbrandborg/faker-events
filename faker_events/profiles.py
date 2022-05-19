@@ -23,7 +23,7 @@ class ProfilesGenerator():
         self.entries = []
 
     def load(self,
-             num_profiles: int = 10,
+             num_profiles: int = 1,
              profiles_file: str = None) -> None:
         """
         Used to Create, Load, and Save profiles.
@@ -40,26 +40,27 @@ class ProfilesGenerator():
             try:
                 with open(profiles_file, encoding="utf-8") as file:
                     profiles_dicts = json.loads(file.read())
-                    self.entries.extend([
+                    self.entries = [
                         SimpleNamespace(**profiles)
                         for index, profiles in enumerate(profiles_dicts)
                         if index < num_profiles
-                    ])
+                    ]
             except FileNotFoundError:
-                self._create(num_profiles)
-                self._save(profiles_file)
+                self.create(num_profiles)
+                self.save(profiles_file)
             if num_profiles > len(self.entries):
-                print("The number of profile requested exceeds the profiles "
-                      "file. Consider recreating and writing the profiles again.",
+                print("WARNING: The number of profiles requested, '{}', "
+                      "exceeds the profiles file. Consider recreating and "
+                      "writing the profiles again."
+                      .format(num_profiles),
                       file=stderr)
         else:
-            self._create(num_profiles)
+            self.create(num_profiles)
 
-
-    def _create(self, num_profiles: int) -> None:
+    def create(self, num_profiles: int) -> None:
         """
-        Creates the fake profiles that will be used for event creation, and adds
-        them to the entries list.
+        Creates the fake profiles that will be used for event creation, and
+        adds them to the entries list.
         """
 
         for identification in range(num_profiles):
@@ -120,8 +121,7 @@ class ProfilesGenerator():
 
             self.entries.append(SimpleNamespace(**profile))
 
-
-    def _save(self, profiles_file: str) -> None:
+    def save(self, profiles_file: str) -> None:
         """
         Saves the profile entries created to a JSON file.
         """

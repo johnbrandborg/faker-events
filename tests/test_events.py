@@ -65,7 +65,9 @@ def event_generator_class(monkeypatch, profile_sample):
 def event_generator(event_generator_class):
     capture = CaptureStream()
     event_generator = event_generator_class(stream=capture)
-    event_generator.first_events = Event(example_event, profiler_example, limit=1)
+    event_generator.first_events = Event(example_event,
+                                         profiler_example,
+                                         limit=1)
     return event_generator
 
 
