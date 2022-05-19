@@ -21,6 +21,11 @@ parser.add_argument("-n", "--nprofiles",
                     default=10,
                     dest="num_profiles",
                     help="The number of profiles to create")
+parser.add_argument("-p", "--profiles",
+                    type=str,
+                    metavar="FILE",
+                    dest="profiles_file",
+                    help="Profiles files to be used")
 parser.add_argument("-s", "--script",
                     type=str,
                     metavar="FILE",
@@ -28,7 +33,7 @@ parser.add_argument("-s", "--script",
                     help="Event Script to be loaded")
 args = parser.parse_args()
 
-faker_events.profiles.load(args.num_profiles)
+faker_events.profiles.load(args.num_profiles, profiles_file=args.profiles_file)
 event_generator = EventGenerator()
 
 if args.script:

@@ -1,8 +1,8 @@
 test:
-	@pytest -vv
+	@python3 -m pytest -vv
 
 lint:
-	@flake8
+	@python3 -m flake8
 
 patch:
 	@NEWVERSION=`awk 'BEGIN{FS=".";OFS=".";}{$$3++;}END{print $$0}' VERSION` \
@@ -12,7 +12,7 @@ patch:
 		&& git push --tag
 
 develop:
-	@pip install -e .[develop]
+	@python3 -m pip install -e .[develop]
 
 clean:
 	@find . -name '__pycache__' | xargs rm -fr
