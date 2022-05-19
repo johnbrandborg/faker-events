@@ -12,111 +12,120 @@ from faker import Faker
 
 fake = Faker()
 
-entries = []
 
-
-def load(num_profiles: int = 10, profiles_file: str = None) -> None:
+class ProfilesGenerator():
     """
-    Used to Create, Load, and Save profiles.
-
-    Parameters
-    ----------
-        num_profiles: int
-            The number of times to process the event
-        profiles_file: str
-            Creates and Uses a file for persistant profiles
+    The Profile Generator instances are used by the Event Generator for access
+    to profiles information, used within the Events.
     """
 
-    if isinstance(profiles_file, str):
-        try:
-            with open(profiles_file, encoding="utf-8") as file:
-                profiles_dicts = json.loads(file.read())
-                entries.extend([
-                    SimpleNamespace(**profiles)
-                    for index, profiles in enumerate(profiles_dicts)
-                    if index < num_profiles
-                ])
-        except FileNotFoundError:
-            _create(num_profiles)
-            _save(profiles_file)
-        if num_profiles > len(entries):
-            print("The number of profile requested exceeds the profiles "
-                  "file. Consider recreating and writing the profiles again.",
-                  file=stderr)
-    else:
-        _create(num_profiles)
+    def __init__(self):
+        self.entries = []
 
+    def load(self,
+             num_profiles: int = 10,
+             profiles_file: str = None) -> None:
+        """
+        Used to Create, Load, and Save profiles.
 
-def _create(num_profiles: int) -> None:
-    """
-    Creates the fake profiles that will be used for event creation, and adds
-    them to the entries list.
-    """
+        Parameters
+        ----------
+            num_profiles: int
+                The number of profiles to load in the entries list.
+            profiles_file: str
+                Creates and Uses a file for persistant profiles
+        """
 
-    for identification in range(num_profiles):
-        gender = choice(('male', 'female'))
-
-        if gender == 'female':
-            first_name = fake.first_name_female()
-            middle_name = fake.first_name_female()
-            prefix_name = fake.prefix_female()
-            suffix_name = fake.suffix_female()
+        if isinstance(profiles_file, str):
+            try:
+                with open(profiles_file, encoding="utf-8") as file:
+                    profiles_dicts = json.loads(file.read())
+                    self.entries.extend([
+                        SimpleNamespace(**profiles)
+                        for index, profiles in enumerate(profiles_dicts)
+                        if index < num_profiles
+                    ])
+            except FileNotFoundError:
+                self._create(num_profiles)
+                self._save(profiles_file)
+            if num_profiles > len(self.entries):
+                print("The number of profile requested exceeds the profiles "
+                      "file. Consider recreating and writing the profiles again.",
+                      file=stderr)
         else:
-            first_name = fake.first_name_male()
-            middle_name = fake.first_name_male()
-            prefix_name = fake.prefix_male()
-            suffix_name = fake.suffix_male()
-
-        last_name = fake.last_name()
-        address = '{{building_number}}|{{street_name}}|{{state_abbr}}' \
-                  '|{{postcode}}|{{city}}'
-        address1 = fake.parse(address).split('|')
-        profile = {
-            'id': identification + 1000,
-            'uuid': fake.uuid4(),
-            'username': fake.user_name(),
-            'gender': gender,
-            'first_name': first_name,
-            'middle_name': middle_name,
-            'last_name': last_name,
-            'prefix_name': prefix_name,
-            'suffix_name': suffix_name,
-            'birthdate': fake.date_of_birth(minimum_age=18,
-                                            maximum_age=80)
-                        .isoformat(),
-            'blood_group': (choice(["A", "B", "AB", "O"]) +
-                            choice(["+", "-"])),
-            'email': f'{first_name}.{last_name}@{fake.domain_name()}',
-            'employer': fake.company(),
-            'job': fake.job(),
-            'full_address1': ' '.join(address1),
-            'building_number1': address1[0],
-            'street_name1': address1[1].split(' ')[0],
-            'street_suffix1': address1[1].split(' ')[1],
-            'state1': address1[2],
-            'postcode1': address1[3],
-            'city1': address1[4],
-            'phone1': fake.phone_number(),
-            'full_address2': ' '.join(address1),
-            'building_number2': address1[0],
-            'street_name2': address1[1].split(' ')[0],
-            'street_suffix2': address1[1].split(' ')[1],
-            'state2': address1[2],
-            'postcode2': address1[3],
-            'city2': address1[4],
-            'phone2': fake.phone_number(),
-            'driver_license': fake.bothify('?#####'),
-            'license_plate': fake.license_plate(),
-        }
-
-        entries.append(SimpleNamespace(**profile))
+            self._create(num_profiles)
 
 
-def _save(profiles_file: str) -> None:
-    """
-    Saves the profile entries created to a JSON file.
-    """
+    def _create(self, num_profiles: int) -> None:
+        """
+        Creates the fake profiles that will be used for event creation, and adds
+        them to the entries list.
+        """
 
-    with open(profiles_file, 'w', encoding="utf-8") as file:
-        profiles_dicts = [vars(item) for item in entries]
-        file.write(json.dumps(profiles_dicts))
+        for identification in range(num_profiles):
+            gender = choice(('male', 'female'))
+
+            if gender == 'female':
+                first_name = fake.first_name_female()
+                middle_name = fake.first_name_female()
+                prefix_name = fake.prefix_female()
+                suffix_name = fake.suffix_female()
+            else:
+                first_name = fake.first_name_male()
+                middle_name = fake.first_name_male()
+                prefix_name = fake.prefix_male()
+                suffix_name = fake.suffix_male()
+
+            last_name = fake.last_name()
+            address = '{{building_number}}|{{street_name}}|{{state_abbr}}' \
+                      '|{{postcode}}|{{city}}'
+            address1 = fake.parse(address).split('|')
+            profile = {
+                'id': identification + 1000,
+                'uuid': fake.uuid4(),
+                'username': fake.user_name(),
+                'gender': gender,
+                'first_name': first_name,
+                'middle_name': middle_name,
+                'last_name': last_name,
+                'prefix_name': prefix_name,
+                'suffix_name': suffix_name,
+                'birthdate': fake.date_of_birth(minimum_age=18,
+                                                maximum_age=80)
+                            .isoformat(),
+                'blood_group': (choice(["A", "B", "AB", "O"]) +
+                                choice(["+", "-"])),
+                'email': f'{first_name}.{last_name}@{fake.domain_name()}',
+                'employer': fake.company(),
+                'job': fake.job(),
+                'full_address1': ' '.join(address1),
+                'building_number1': address1[0],
+                'street_name1': address1[1].split(' ')[0],
+                'street_suffix1': address1[1].split(' ')[1],
+                'state1': address1[2],
+                'postcode1': address1[3],
+                'city1': address1[4],
+                'phone1': fake.phone_number(),
+                'full_address2': ' '.join(address1),
+                'building_number2': address1[0],
+                'street_name2': address1[1].split(' ')[0],
+                'street_suffix2': address1[1].split(' ')[1],
+                'state2': address1[2],
+                'postcode2': address1[3],
+                'city2': address1[4],
+                'phone2': fake.phone_number(),
+                'driver_license': fake.bothify('?#####'),
+                'license_plate': fake.license_plate(),
+            }
+
+            self.entries.append(SimpleNamespace(**profile))
+
+
+    def _save(self, profiles_file: str) -> None:
+        """
+        Saves the profile entries created to a JSON file.
+        """
+
+        with open(profiles_file, 'w', encoding="utf-8") as file:
+            profiles_dicts = [vars(item) for item in self.entries]
+            file.write(json.dumps(profiles_dicts))

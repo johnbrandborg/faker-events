@@ -11,7 +11,7 @@ from sys import stderr
 
 from croniter import croniter
 from .handlers import Stream
-from .profiles import entries
+from .profiles import ProfilesGenerator
 
 __all__ = ['Event', 'EventGenerator']
 
@@ -111,7 +111,7 @@ class Event():
         else:
             raise TypeError("Events must be only Event Type instances")
 
-    def process(self, index=0, time="") -> tuple:
+    def process(self, index: int, entries: list, time: str) -> tuple:
         """
         Passes the event and profile data to the profiler function.  The
         Profiler function can update the event itself, or return a new Dict
@@ -162,7 +162,13 @@ class EventGenerator():
     _scheduled = []
     _timezone = None
 
-    def __init__(self):
+    def __init__(self, profiles: ProfilesGenerator = None):
+        if isinstance(profiles, ProfilesGenerator):
+            self.profiles = profiles
+        else:
+            self.profiles = ProfilesGenerator()
+            self.profiles.load()
+
         self._total_count = 0
         self._state_table = []
         Event.clear()
@@ -200,7 +206,9 @@ class EventGenerator():
                 event_time = datetime.now(self._timezone).isoformat()
 
             delay = None if event.group_up else random() * 60/event.epm
-            yield (*event.process(pindex, time=event_time), delay)
+            yield (*event.process(pindex,
+                                  self.profiles.entries,
+                                  time=event_time), delay)
 
             if remain > 0 and not remain < 0:
                 self._state_table[sindex]['events'][eindex]['remain'] -= 1
@@ -332,7 +340,7 @@ class EventGenerator():
                     } for event in self._events
                 ]
             }
-            for index, _ in enumerate(entries)
+            for index, _ in enumerate(self.profiles.entries)
         ]
         self._total_count = 0
 
@@ -342,7 +350,7 @@ class EventGenerator():
         creates an independent state stable to process, because all scheduler
         events are processed against all profiles, rather than individually.
         """
-        entries_count = len(entries)
+        entries_count = len(self.profiles.entries)
 
         # Syncronize to the next 0 seconds on the minute
         self._dtbase = datetime.now()
@@ -362,6 +370,7 @@ class EventGenerator():
                     if current_time >= scheduled_time:
                         response, deliver = event['object'].process(
                             index,
+                            self.profiles.entries,
                             current_time.isoformat())
                         if deliver:
                             self._stream.send(response)
