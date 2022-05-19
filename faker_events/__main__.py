@@ -33,9 +33,9 @@ parser.add_argument("-s", "--script",
                     help="Event Script to be loaded")
 args = parser.parse_args()
 
-profile_generator = ProfilesGenerator()
-profile_generator.load(args.num_profiles, args.profiles_file)
-event_generator = EventGenerator(profile_generator)
+profiles_generator = ProfilesGenerator()
+profiles_generator.load(args.num_profiles, args.profiles_file)
+event_generator = EventGenerator(profiles_generator)
 
 if args.script:
     try:
@@ -47,7 +47,6 @@ if args.script:
         sys.exit(1)
 else:
     import faker_events.example  # noqa
-
 
 try:
     event_generator.start()

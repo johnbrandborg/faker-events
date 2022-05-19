@@ -10,16 +10,20 @@ from types import SimpleNamespace
 
 from faker import Faker
 
-fake = Faker()
-
 
 class ProfilesGenerator():
-    """
-    The Profile Generator instances are used by the Event Generator for access
-    to profiles information, used within the Events.
-    """
+    def __init__(self, fake: Faker = Faker()):
+        """
+        The Profile Generator instances are used by the Event Generator for
+        access to profiles information, used within the Events.
 
-    def __init__(self):
+        Parameters
+        ----------
+            fake: Faker
+                A custom instances of Faker that will be used for profile
+                generation.
+        """
+        self.fake = fake
         self.entries = []
 
     def load(self,
@@ -62,6 +66,8 @@ class ProfilesGenerator():
         Creates the fake profiles that will be used for event creation, and
         adds them to the entries list.
         """
+
+        fake = self.fake
 
         for identification in range(num_profiles):
             gender = choice(('male', 'female'))

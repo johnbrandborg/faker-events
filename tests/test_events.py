@@ -4,23 +4,19 @@
 from datetime import datetime, timedelta
 import json
 from types import GeneratorType, SimpleNamespace
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import Mock
 
-from faker import Faker
 import pytest
 
-from faker_events.events import (
-    Event,
-    EventGenerator,
-    example_event,
-    profiler_example
-)
+from faker_events.events import Event, EventGenerator
 
-
-PROFILE_SAMPLE = {
-    'id': '1',
-    'first_name': 'John',
-    'last_name': 'Smith',
+EVENT_SAMPLE = {
+    'event_time': '',
+    'type': 'test',
+    'event_id': '',
+    'user_id': '',
+    'first_name': '',
+    'last_name': '',
 }
 
 
@@ -37,7 +33,7 @@ class CaptureStream():
 def event():
     """ Returns an Event with no profiled method
     """
-    event = {}
+    event = {'test': True}
     return Event(event)
 
 
@@ -54,20 +50,15 @@ def event_profiled():
 
 
 @pytest.fixture
-def event_generator_class(monkeypatch, profile_sample):
-    mcreate_profiles = Mock()
-    monkeypatch.setattr(EventGenerator, 'create_profiles', mcreate_profiles)
-    monkeypatch.setattr(EventGenerator, 'profiles', [profile_sample])
-    return EventGenerator
+def event_generator(profile_sample):
 
+    class MockProfilerGenerator:
+        entries = profile_sample
 
-@pytest.fixture
-def event_generator(event_generator_class):
     capture = CaptureStream()
-    event_generator = event_generator_class(stream=capture)
-    event_generator.first_events = Event(example_event,
-                                         profiler_example,
-                                         limit=1)
+    event_generator = EventGenerator(MockProfilerGenerator())
+    event_generator.set_stream(capture)
+    event_generator.set_first_events = Event(EVENT_SAMPLE)
     return event_generator
 
 
@@ -75,32 +66,26 @@ def event_generator(event_generator_class):
 def profile_sample():
     """ Returns a Profile to be used on Events
     """
-    return SimpleNamespace(**PROFILE_SAMPLE)
-
-
-@pytest.fixture
-def profile_json():
-    """ Returns a list with a Profile to be use in Files
-    """
-    return json.dumps([PROFILE_SAMPLE])
+    return [SimpleNamespace(id='1', first_name='John', last_name='Smith')]
 
 
 def test_event_returns_unprofiled(event):
     """ Event call only returns the event data
     """
-    assert event.process() == {}
+    assert event.process(0, [], "") == ({'test': True}, True)
 
 
 def test_event_returns_profiles(event_profiled):
     """ Event call returns the profiled data
     """
-    assert event_profiled.process()['Profiled']
+    result, _ = event_profiled.process(0, [{}], "")
+    assert result.get("Profiled")
 
 
 def test_event_repr(event):
     """ Event Repr format check
     """
-    assert repr(event) == 'Event({}, None, limit=1)'
+    assert repr(event) == "Event({'test': True}, None, limit=1)"
 
 
 def test_event_next_get(event):
@@ -129,40 +114,26 @@ def test_example_event_update(profile_sample):
     """ ExampleEvent Output
     """
     event_time = datetime.now().isoformat("Z")
-    example = Event(example_event, profiler_example)
+
+    def profiler(event, profile):
+        return {
+            'event_time': event.time,
+            'event_id': event.id,
+            'user_id': profile.id,
+            'first_name': profile.first_name,
+            'last_name': profile.last_name,
+        }
+    example = Event(EVENT_SAMPLE, profiler)
     example.process(0, profile_sample, event_time)
 
     assert example.data == {
-        'type': 'example',
+        'type': 'test',
         'event_time': event_time,
         'event_id': 1,
         'user_id': '1',
         'first_name': 'John',
         'last_name': 'Smith'
     }
-
-
-def test_generator_profile_file_read(profile_json, profile_sample):
-    """ Use a file for profile data if found
-    """
-    mocked_file = mock_open(read_data=profile_json)
-    with patch('faker_events.events.open', mocked_file) as mopen:
-        event_generator = EventGenerator(1, profiles_file='test')
-
-    mopen.assert_called_once_with('test')
-    assert event_generator.profiles == [profile_sample]
-
-
-def test_generator_profile_file_create(event_generator_class):
-    """ Create a file for the profile data if not found
-    """
-    mopen = mock_open()
-    mopen.side_effect = [FileNotFoundError, mopen.return_value]
-
-    with patch('faker_events.events.open', mopen):
-        event_generator_class(1, profiles_file='test')
-
-    assert mopen.call_count == 2
 
 
 def test_generator_create_events(event_generator):
@@ -196,75 +167,13 @@ def test_generator_create_events_resets_state(event_generator):
     m_reset_state_table.assert_called_once()
 
 
-def test_generator_can_accept_faker_instance(event_generator_class):
-    """ Use a Faker Instance if supplied to the Generator
-    """
-    event_generator = event_generator_class()
-    assert event_generator.fake.locales == ['en_US']
-
-    event_generator = event_generator_class(fake=Faker(locale=['en_AU']))
-    assert event_generator.fake.locales == ['en_AU']
-
-
-def test_generator_profile_creation():
-    """ Profiles are created when the Event Generator is created
-    """
-    event_gen = EventGenerator(1)
-
-    attributes = [
-        'id',
-        'uuid',
-        'username',
-        'gender',
-        'first_name',
-        'last_name',
-        'prefix_name',
-        'suffix_name',
-        'birthdate',
-        'blood_group',
-        'email',
-        'employer',
-        'job',
-        'full_address1',
-        'building_number1',
-        'street_name1',
-        'street_suffix1',
-        'state1',
-        'postcode1',
-        'city1',
-        'phone1',
-        'full_address2',
-        'building_number2',
-        'street_name2',
-        'street_suffix2',
-        'state2',
-        'postcode2',
-        'city2',
-        'phone2',
-        'driver_license',
-        'license_plate',
-    ]
-
-    assert len(event_gen.profiles) == 1
-    assert isinstance(event_gen.profiles[0], SimpleNamespace)
-
-    for attr in attributes:
-        assert hasattr(event_gen.profiles[0], attr)
-
-
-def test_generator_first_events_get(event_generator):
-    """ First event method returns the Event to be used initially
-    """
-    assert isinstance(event_generator.first_events[0], Event)
-
-
 def test_generator_first_events_set(event_generator):
     """ First event method sets the Event to be used initially
         Setting the events also resets the state table
     """
     m_reset_state_table = Mock()
     event_generator._reset_state_table = m_reset_state_table
-    event_generator.first_events = Event({})
+    event_generator.set_first_events = Event({})
 
     assert isinstance(event_generator._events[0], Event)
     m_reset_state_table.assert_called_once()
@@ -274,14 +183,14 @@ def test_generator_first_events_get_type_check(event_generator):
     """ First event method checks that the type is Event
     """
     with pytest.raises(TypeError):
-        event_generator.first_events = 'not an Event Type'
+        event_generator.set_first_events = 'not an Event Type'
 
 
 def test_generator_live_stream(event_generator):
     """ Live stream rns randomly timed event generation from now
     """
-    event_generator.stream.captured = []
-    event_generator.live_stream()
+    event_generator._stream.captured = []
+    event_generator.start()
 
     dtstamp = datetime.now().isoformat()
     expected_message = {
@@ -293,8 +202,8 @@ def test_generator_live_stream(event_generator):
         'last_name': 'Smith'
     }
 
-    assert len(event_generator.stream.captured) == 1
-    sent_message = json.loads(event_generator.stream.captured[0])
+    assert len(event_generator._stream.captured) == 1
+    sent_message = json.loads(event_generator._stream.captured[0])
     sent_message['event_time'] = sent_message['event_time'].split('T')[0]
     assert sent_message == expected_message
 

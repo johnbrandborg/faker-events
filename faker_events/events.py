@@ -60,9 +60,9 @@ class Event():
         self._next_events = None
 
     def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}'
-                f'({self._data.get("template")}, '
-                f'{self.profiler}, limit={self.limit})')
+        return (f"{self.__class__.__name__}"
+                f"({self._data.get('template')}, "
+                f"{self.profiler}, limit={self.limit})")
 
     def __and__(self, other):
         self.next = other
