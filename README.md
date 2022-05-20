@@ -7,9 +7,12 @@ Generates Events with formatted fake data for streams. The intention is for
  development and testing purposes without relying on real data.
 
 ## Usage
-Faker Events is a package that doesn't come with a CLI.  This is in part
-due to the Events you create being written in Python as Dictionaries, and
-processed using a function referred to as the profiler.
+Faker Events allows you to create multiple data structures, and events that
+occur randomly or schedule, after which are sent to a data stream or system,
+through the message handler.
+
+The structures can be defined as Python Dictionaries, and processed using a
+function referred to as the profiler.
 
 The Faker package is utilised to generate the data on the profiles.
 Understanding how Faker works is recommended and you can find the documentation
@@ -36,39 +39,34 @@ pip install faker-events[kinesis]
 Create an Event Generator and start using Live Stream. By default only 10
 profiles are created.  Giving large numbers can take sometime to build.
 
-Set the "Events Per Minute" on the live_stream method to change the maximum
+Set the "Events Per Minute" on the start method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
 minute, but they are random so expect potentially lower rates.
 
-**Standard Output**
-```python
-import faker_events
+If you want to see a demo of this without writing code, run faker_events as a
+ module from the command line.  CTRL-C to stop the event stream.
 
-eg = faker_events.EventGenerator()
-eg.live_stream(epm=120)
+```shell
+make demo
+```
+
+or
+
+```shell
+python3 -m faker_events
 ```
 
 Output
 ```json
-{"event_time": "2021-09-28T14:05:31.520806", "type": "example", "event_id": 1, "user_id": 1008, "first_name": "Cindy", "last_name": "Bernard"}
-{"event_time": "2021-09-28T14:05:31.997151", "type": "example", "event_id": 2, "user_id": 1003, "first_name": "Nicole", "last_name": "Mcneil"}
-{"event_time": "2021-09-28T14:05:32.241834", "type": "example", "event_id": 3, "user_id": 1004, "first_name": "David", "last_name": "Berg"}
-{"event_time": "2021-09-28T14:05:33.135551", "type": "example", "event_id": 4, "user_id": 1007, "first_name": "Kylie", "last_name": "Ortiz"}
-{"event_time": "2021-09-28T14:05:33.265245", "type": "example", "event_id": 5, "user_id": 1006, "first_name": "Steven", "last_name": "Donaldson"}
-{"event_time": "2021-09-28T14:05:34.159739", "type": "example", "event_id": 6, "user_id": 1005, "first_name": "Jennifer", "last_name": "Porter"}
-{"event_time": "2021-09-28T14:05:34.722054", "type": "example", "event_id": 7, "user_id": 1009, "first_name": "Jason", "last_name": "York"}
-{"event_time": "2021-09-28T14:05:35.054572", "type": "example", "event_id": 8, "user_id": 1002, "first_name": "Peter", "last_name": "Elliott"}
-{"event_time": "2021-09-28T14:05:35.613473", "type": "example", "event_id": 9, "user_id": 1000, "first_name": "Tina", "last_name": "Nelson"}
-{"event_time": "2021-09-28T14:05:36.166375", "type": "example", "event_id": 10, "user_id": 1001, "first_name": "Jason", "last_name": "Raymond"}
-^C
-Stopping Event Stream.  10 in total generated.
-```
-
-If you want to see a demo of  this without writing code, run faker_events as a
- module from the command line.  CTRL-C to stop the event stream.
-
-```bash
-python -m faker_events
+{"event_time": "2022-05-19T22:43:39.683304", "type": "example", "event_id": "1", "user_id": "1009", "first_name": "Brandon", "last_name": "Braun", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:40.291519", "type": "example", "event_id": "2", "user_id": "1002", "first_name": "Jonathan", "last_name": "Keith", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:41.001050", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:41.358616", "type": "example", "event_id": "4", "user_id": "1004", "first_name": "Joseph", "last_name": "Frank", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:42.356265", "type": "example", "event_id": "4", "user_id": "1004", "first_name": "Joseph", "last_name": "Frank", "spent": 71, "status": "normal"}
+{"event_time": "2022-05-19T22:43:42.788833", "type": "example", "event_id": "6", "user_id": "1003", "first_name": "Nathaniel", "last_name": "Garrett", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:43.106967", "type": "example", "event_id": "7", "user_id": "1000", "first_name": "Jeffrey", "last_name": "Owens", "spent": 0, "status": "normal"}
+{"event_time": "2022-05-19T22:43:43.754115", "type": "example", "event_id": "2", "user_id": "1002", "first_name": "Jonathan", "last_name": "Keith", "spent": 77, "status": "normal"}
+{"event_time": "2022-05-19T22:43:44.121750", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 93, "status": "normal"}
 ```
 
 ### Using Stream Handlers
@@ -81,8 +79,9 @@ Kinesis.
 import faker_events
 
 example = faker_events.Stream(stype='kafka', host='kafka:9092', name='example')
-eg = faker_events.EventGenerator(stream=example)
-eg.live_stream()
+eg = faker_events.EventGenerator()
+eg.set_stream(example)
+eg.start()
 ```
 
 **Kinesis**
@@ -90,8 +89,9 @@ eg.live_stream()
 import faker_events
 
 example = faker_events.Stream(stype='kinesis', name='example', key='key')
+eg.set_stream(example)
 eg = faker_events.EventGenerator(stream=example)
-eg.live_stream()
+eg.start()
 ```
 
 ### Starting a Batch
@@ -104,12 +104,13 @@ from datetime import datetime, timedelta
 
 import faker_events
 
-eg = faker_events.EventGenerator(num_profiles=1)
+eg = faker_events.EventGenerator()
 
 start = datetime(2019, 1, 1)  # No one wants to relive 2020...
 finish = start + timedelta(seconds=10)
 
-eg.batch(start, finish, epm=10)
+eg.batch(start, finish)
+eg.start()
 ```
 
 ## Data Points
@@ -166,7 +167,7 @@ can be used on the 'profile' within the Event Profiler function.
 Creating an Event is as easy as just creating a dictionary that is passed into
 the Event Class.  The Event Instance is then just set on the Event Generator,
 and you can then use the 'create_events' method which will return a generator,
-or us the 'live_stream' or 'batch' methods that will handle the generator.
+or us the 'start' or 'batch' methods that will handle the generator.
 
 If you want event values to be dynamic, create a profiler functions. The
 function should take two arguments; event and profile.  These carry the attributes
@@ -201,9 +202,9 @@ def profiler(event, profile):
         'Profiled': profile.email,
     }
 
-eg = EventGenerator(num_profiles=2)
-eg.first_events = Event(event, profiler)
-eg.live_stream()
+eg = EventGenerator()
+eg.set_first_events(Event(event, profiler))
+eg.start()
 ```
 
 ## Event Sequences
@@ -218,21 +219,20 @@ can be use to set the next event.
 ```python
 from faker_events import Event, EventGenerator
 
-eg = EventGenerator(num_profiles=1)
+eg = EventGenerator()
 
 a = Event({'Name': 'A'})
 b = Event({'Name': 'B'}, limit=2)
 c = Event({'Name': 'C'})
 
-eg.first_events = a
+eg.set_first_events(a)
 a.next = b
 b.next = c
 
 # Short form:
-# eg.first_events = a
 # a >> b >> c
 
-eg.live_stream()
+eg.start()
 ```
 
 **Output**
@@ -241,13 +241,12 @@ eg.live_stream()
 {"Name": "B"}
 {"Name": "B"}
 {"Name": "C"}
-Event limited reached.  4 in total generated
 ```
 
 #### Group
 If you need to two different events to be grouped together, you can set the
 group_by parameter to true on the Event instance creation.  This will cause the
-live_stream and batch methods to send them together.
+start and batch methods to send them together.
 
 You can also use the '&' operator (rather than '>>') to set the next event but
 grouped together so the event_time is the same.  Try not to mix the operators
@@ -275,7 +274,7 @@ from faker_events import EventGenerator, Event
 from faker import Faker
 
 faker = Faker()
-eg = EventGenerator(num_profiles=2)
+eg = EventGenerator()
 
 customer = {'Name': 'Unknown', 'Job': None, 'Created': None, 'Updated': None}
 
@@ -296,10 +295,10 @@ def change_job(event, profile):
 new_customer_event = Event(customer, new_customer)
 customer_marriged_event = Event(customer, change_job)
 
-eg.first_events = new_customer_event
+eg.set_first_events(new_customer_event)
 new_customer_event >> customer_marriged_event
 
-eg.live_stream()
+eg.start()
 ```
 
 Output
@@ -308,7 +307,6 @@ Output
 {"Name": "Eduardo", "Job": "Conservation officer, nature", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:56.316593"}
 {"Name": "Ian", "Job": "Database administrator", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:56.773134"}
 {"Name": "Eduardo", "Job": "Ergonomist", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:57.694891"}
-Event limit reached.  4 in total generated
 ```
 
 If you need to update the details of the profile, or add persistant data from
@@ -317,9 +315,9 @@ When using sequenced events, the profile can be used to retrieve the data from
 previous events.
 
 ```python
-from faker_events import EventGenerator, Event
+from faker_events import Event, EventGenerator
 
-eg = EventGenerator(num_profiles=1)
+eg = EventGenerator()
 
 event_a = {'Name': 'A', 'LastEvent': 'none'}
 
@@ -341,10 +339,10 @@ a = Event(event_a, profiler_a, 1)
 b = Event(event_b, profiler_b, 1)
 c = Event(event_c, profiler_c, 1)
 
-eg.first_events = a
+eg.set_first_events(a)
 a >> b >> c
 
-eg.live_stream()
+eg.start()
 ```
 
 Output
@@ -352,7 +350,6 @@ Output
 {"Name": "A", "LastEvent": "none"}
 {"Name": "B", "LastEvent": "EventA"}
 {"Name": "C", "LastEvent": "EventB"}
-Event limit reached.  3 in total generated
 ```
 
 ### Multiple Event Flows
@@ -362,7 +359,7 @@ multiple Event Flows for each profile created, creating complex event streams.
 ```python
 from faker_events import Event, EventGenerator
 
-eg = EventGenerator(1)
+eg = EventGenerator()
 
 flow_a1 = Event({"Name": "A1"})
 flow_aa1 = Event({"Name": "AA1"})
@@ -372,11 +369,11 @@ flow_b1 = Event({"Name": "B1"})
 flow_bb1 = Event({"Name": "BB1"})
 flow_bb2 = Event({"Name": "BB2"})
 
-eg.first_events = [flow_a1, flow_b1]
+eg.set_first_events([flow_a1, flow_b1])
 flow_a1 >> [flow_aa1, flow_aa2]
 flow_b1 >> [flow_bb1, flow_bb2]
 
-eg.live_stream()
+eg.start()
 ```
 
 Output
@@ -387,7 +384,6 @@ Output
 {"Name": "AA1"}
 {"Name": "AA2"}
 {"Name": "BB1"}
-Event limit reached.  6 in total generated
 ```
 
 ## License
