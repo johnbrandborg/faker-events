@@ -11,7 +11,7 @@ from types import SimpleNamespace
 from faker import Faker
 
 
-class ProfilesGenerator():
+class ProfileGenerator():
     def __init__(self, fake: Faker = Faker()):
         """
         The Profile Generator instances are used by the Event Generator for
@@ -27,7 +27,7 @@ class ProfilesGenerator():
         self.entries = []
 
     def load(self,
-             num_profiles: int = 10,
+             num_profiles: int = 1,
              profiles_file: str = None) -> None:
         """
         Used to Create, Load, and Save profiles.

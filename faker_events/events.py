@@ -11,7 +11,7 @@ from sys import stderr
 
 from croniter import croniter
 from .handlers import Stream
-from .profiles import ProfilesGenerator
+from .profiles import ProfileGenerator
 
 __all__ = ['Event', 'EventGenerator']
 
@@ -162,11 +162,11 @@ class EventGenerator():
     _scheduled = []
     _timezone = None
 
-    def __init__(self, profiles: ProfilesGenerator = None):
-        if isinstance(profiles, ProfilesGenerator):
+    def __init__(self, profiles: ProfileGenerator = None):
+        if isinstance(profiles, ProfileGenerator):
             self.profiles = profiles
         else:
-            self.profiles = ProfilesGenerator()
+            self.profiles = ProfileGenerator()
             self.profiles.load()
 
         self._total_count = 0

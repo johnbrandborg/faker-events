@@ -10,7 +10,7 @@ import os
 import sys
 
 from faker_events import EventGenerator
-from faker_events import ProfilesGenerator
+from faker_events import ProfileGenerator
 
 
 parser = ArgumentParser(prog="python -m faker_events",
@@ -30,10 +30,10 @@ parser.add_argument("-s", "--script",
                     type=str,
                     metavar="FILE",
                     dest="script",
-                    help="Event Script to be loaded")
+                    help="Event Script to be loaded.")
 args = parser.parse_args()
 
-profiles_generator = ProfilesGenerator()
+profiles_generator = ProfileGenerator()
 profiles_generator.load(args.num_profiles, args.profiles_file)
 event_generator = EventGenerator(profiles_generator)
 

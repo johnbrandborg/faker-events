@@ -7,7 +7,7 @@ from unittest.mock import mock_open, patch
 
 from faker import Faker
 import pytest
-from faker_events import ProfilesGenerator
+from faker_events import ProfileGenerator
 
 PROFILE_SAMPLE = {
     'id': '1',
@@ -35,7 +35,7 @@ def test_generator_profile_creation():
     Load should create entries using SimpleNamespace, and a predefined set
     of attributes, to be used in the profiler functions.
     """
-    profiles_generator = ProfilesGenerator()
+    profiles_generator = ProfileGenerator()
     profiles_generator.load(num_profiles=1)
 
     attributes = [
@@ -84,7 +84,7 @@ def test_generator_profile_file_read(profile_json, profile_sample):
     """
     mocked_file = mock_open(read_data=profile_json)
     with patch('faker_events.profiles.open', mocked_file) as mopen:
-        profiles_generator = ProfilesGenerator()
+        profiles_generator = ProfileGenerator()
         profiles_generator.load(num_profiles=1, profiles_file='test')
 
     mopen.assert_called_once_with('test', encoding='utf-8')
@@ -98,7 +98,7 @@ def test_generator_profile_file_create():
     mopen.side_effect = [FileNotFoundError, mopen.return_value]
 
     with patch('faker_events.profiles.open', mopen):
-        profiles_generator = ProfilesGenerator()
+        profiles_generator = ProfileGenerator()
         profiles_generator.load(num_profiles=1, profiles_file='test')
 
         mopen.assert_called_with('test', 'w', encoding='utf-8')
@@ -107,8 +107,8 @@ def test_generator_profile_file_create():
 def test_generator_can_accept_faker_instance():
     """ Use a Faker Instance if supplied to the Generator
     """
-    profiles_generator = ProfilesGenerator()
+    profiles_generator = ProfileGenerator()
     assert profiles_generator.fake.locales == ['en_US']
 
-    profiles_generator = ProfilesGenerator(fake=Faker(locale=['en_AU']))
+    profiles_generator = ProfileGenerator(fake=Faker(locale=['en_AU']))
     assert profiles_generator.fake.locales == ['en_AU']

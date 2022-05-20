@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from faker_events.events import Event, EventGenerator, ProfilesGenerator
+from faker_events.events import Event, EventGenerator, ProfileGenerator
 
 
 structure = {
@@ -123,7 +123,7 @@ def event_generator(profile_sample):
         def send(self, message):
             self.captured.append(message)
 
-    profiles_generator = ProfilesGenerator()
+    profiles_generator = ProfileGenerator()
     profiles_generator.entries = profile_sample
 
     EventGenerator.set_stream(CaptureStream())
