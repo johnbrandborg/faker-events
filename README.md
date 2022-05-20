@@ -241,7 +241,6 @@ eg.start()
 {"Name": "B"}
 {"Name": "B"}
 {"Name": "C"}
-Event limited reached.  4 in total generated
 ```
 
 #### Group
@@ -308,7 +307,6 @@ Output
 {"Name": "Eduardo", "Job": "Conservation officer, nature", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:56.316593"}
 {"Name": "Ian", "Job": "Database administrator", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:56.773134"}
 {"Name": "Eduardo", "Job": "Ergonomist", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:57.694891"}
-Event limit reached.  4 in total generated
 ```
 
 If you need to update the details of the profile, or add persistant data from
@@ -352,7 +350,6 @@ Output
 {"Name": "A", "LastEvent": "none"}
 {"Name": "B", "LastEvent": "EventA"}
 {"Name": "C", "LastEvent": "EventB"}
-Event limit reached.  3 in total generated
 ```
 
 ### Multiple Event Flows
@@ -387,7 +384,6 @@ Output
 {"Name": "AA1"}
 {"Name": "AA2"}
 {"Name": "BB1"}
-Event limit reached.  6 in total generated
 ```
 
 ## License
