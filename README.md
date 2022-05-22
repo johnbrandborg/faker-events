@@ -43,8 +43,8 @@ Set the "Events Per Minute" on the start method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
 minute, but they are random so expect potentially lower rates.
 
-If you want to see a demo of this without writing code, run faker_events
-from the command line.  For help in using the CLI use the -h parameter.  
+If you want to see an example of this without writing code, run faker_events
+from the command line.  For help in using the CLI use the -h parameter.
 
 ```shell
 faker_events -n 10
@@ -62,6 +62,10 @@ Output
 {"event_time": "2022-05-19T22:43:43.754115", "type": "example", "event_id": "2", "user_id": "1002", "first_name": "Jonathan", "last_name": "Keith", "spent": 77, "status": "normal"}
 {"event_time": "2022-05-19T22:43:44.121750", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 93, "status": "normal"}
 ```
+
+If you would like to know more about how this Event Flow was created, read the
+[Example documentation](docs/Example.MD).
+
 
 #### Running a Faker Event Script
 
