@@ -7,7 +7,7 @@ This flow is attempting to simulate new accounts being created by people, who
 make a number of transactions.  Then a scheduled process occurs ever minute to
 identify if spend above a theshold occurs, change the status of the persons.
 
-Once the the random and scheduled events are depleted, the run stops.
+Once the the random and scheduled events are depleted, the event flow stops.
 
 ```python
 from faker import Faker
