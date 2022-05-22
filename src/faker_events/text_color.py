@@ -3,6 +3,7 @@ Text Coloring made easy
 """
 
 from enum import Enum
+from re import sub
 from sys import stderr
 
 
@@ -88,3 +89,25 @@ def eprint(value: str, color: Palatte = None) -> None:
     if type(color) == Palatte:
         value = color.value + value + Palatte.RESET.value
     print(value, file=stderr)
+
+
+def colorize_json(string):
+    """
+    Takes a JSON string, and color codes it to look pretty
+    """
+    reset = Palatte.RESET.value
+    green = Palatte.GREEN.value
+    blue = Palatte.BLUE.value
+    purple = Palatte.PURPLE.value
+    cyan = Palatte.CYAN.value
+
+    updates = (
+        (r'"(\w+)":', blue + r'"\1"' + reset + ':'),
+        (r': "(\S+)"', r':' + green + r' "\1"' + reset),
+        (r': (\d+\.\d+)', r': ' + purple + r' \1' + reset),
+        (r': (\d+)', r':' + purple + r' \1' + reset),
+        (r': (true|false|null)', r': ' + cyan + r' \1' + reset),
+    )
+    for before, after in updates:
+        string = sub(before, after, string)
+    return string
