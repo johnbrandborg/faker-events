@@ -44,10 +44,10 @@ allowed, but subject to system performance also.  The default is ~60 per
 minute, but they are random so expect potentially lower rates.
 
 If you want to see a demo of this without writing code, run faker_events
-from the command line.  CTRL-C to stop the event stream.
+from the command line.  For help in using the CLI use the -h parameter.  
 
 ```shell
-faker_events
+faker_events -n 10
 ```
 
 Output
@@ -63,8 +63,6 @@ Output
 {"event_time": "2022-05-19T22:43:44.121750", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 93, "status": "normal"}
 ```
 
-For help in using the CLI use the -h parameter.  
-
 #### Running a Faker Event Script
 
 You can work with Faker Events interactively in Python, or you can just use
@@ -74,6 +72,10 @@ interface.
 ```shell
 faker_events -s fake_users_flow.py -n 1
 ```
+
+If you prefer to use Python diretly, use the `start` method on an
+EventGenerator instance, to begin the steam.
+
 
 #### Saving the Profile Data
 
@@ -108,20 +110,19 @@ EventGenerator.set_stream(example)
 Creating a custom Stream handler is easy.  Just create a Class that has a
 `send` method, which takes the Dictionary of data, and then deliveries it.
 
-Custom Handler
+**Custom Handler**
 ```python
 class custom_stream():
-    def _handler(message: Dict) -> None:
-        # Do something with the message
+    def __init__(self, *args, **kwargs):
+        # Store Parameters and Connect to destination
 
-    def __init__(self):
-        self.send = _handler
+    def send(self, message: Dict) -> None:
+        # Do something with the message
 ```
 
 ### Starting a Batch
 Create an Event Generator and use the batch method, with a start and finish
 datetime object, and the frequncy like on the live stream.
-
 
 ```python
 from datetime import datetime, timedelta
@@ -148,9 +149,10 @@ By default the Event time is local time.  Set the timezone on the generator
 when required.
 
 ### Profile Data Points
-When you create the Event Generator, the profiles you will use in the events
-are created with a number of data points. Below is a list of attributes that
-can be used on the 'profile' within the Event Profiler function.
+When you use the Event Generator, the profiles you will use are created by the
+Profile Generator.  Each profile holds a number of data points. Below is a
+list of attributes that can be used on the 'profile' within the Event Profiler
+function.
 
 * id
 * uuid
@@ -315,7 +317,7 @@ new_customer_event >> customer_marriged_event
 EventGenerator.set_first_events(new_customer_event)
 ```
 
-Output
+Output (with two profiles)
 ```json
 {"Name": "Ian", "Job": "Medical technical officer", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:55.809062"}
 {"Name": "Eduardo", "Job": "Conservation officer, nature", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:56.316593"}
