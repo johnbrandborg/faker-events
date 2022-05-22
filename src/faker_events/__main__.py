@@ -11,7 +11,7 @@ import sys
 
 from faker_events import EventGenerator
 from faker_events import ProfileGenerator
-
+from faker_events.text_color import eprint, Palatte
 
 parser = ArgumentParser(prog="python -m faker_events",
                         description="Faker Events creates JSON events, and"
@@ -43,7 +43,7 @@ if args.script:
         module_path = args.script.rstrip(".py").replace("/", ".")
         event_script = importlib.import_module(module_path)
     except ModuleNotFoundError:
-        print(f"ERROR: No event module named '{args.script}'", file=sys.stderr)
+        eprint(f"ERROR: No event module named '{args.script}'", Palatte.RED)
         sys.exit(1)
 else:
     import faker_events.example  # noqa
@@ -51,5 +51,5 @@ else:
 try:
     event_generator.start()
 except KeyboardInterrupt:
-    print(f"\nStopping Event Stream.  {event_generator._total_count} in",
-          "total generated.", file=sys.stderr)
+    eprint(f"\nStopping Event Stream.  {event_generator._total_count} in "
+           "total generated.", Palatte.BLUE)

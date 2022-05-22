@@ -89,8 +89,8 @@ eg.start()
 import faker_events
 
 example = faker_events.Stream(stype='kinesis', name='example', key='key')
-eg.set_stream(example)
 eg = faker_events.EventGenerator(stream=example)
+eg.set_stream(example)
 eg.start()
 ```
 

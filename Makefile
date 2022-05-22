@@ -2,7 +2,7 @@ demo:
 	@python3 -m faker_events
 
 test:
-	@python3 -m pytest -vv
+	@python3 -m pytest
 
 lint:
 	@python3 -m flake8
