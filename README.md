@@ -253,7 +253,7 @@ b.next = c
 EventGenerator.set_first_events(a)
 ```
 
-**Output**
+Output
 ```json
 {"Name": "A"}
 {"Name": "B"}
