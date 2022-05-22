@@ -50,13 +50,15 @@ class ProfileGenerator():
                         if index < num_profiles
                     ]
             except FileNotFoundError:
+                eprint(f"No profiles file {profiles_file} found. Creating "
+                       "the file now.", Palatte.BLUE)
                 self.create(num_profiles)
                 self.save(profiles_file)
             if num_profiles > len(self.entries):
                 eprint("WARNING: The number of profiles requested, '{}', "
                        "exceeds the profiles file. Consider recreating and "
-                       "writing the profiles again."
-                       .format(num_profiles), Palatte.YELLOW)
+                       "writing the profiles again.".format(num_profiles),
+                       Palatte.YELLOW)
         else:
             self.create(num_profiles)
 

@@ -31,6 +31,10 @@ parser.add_argument("-s", "--script",
                     metavar="FILE",
                     dest="script",
                     help="Event Script to be loaded.")
+parser.add_argument("-u", "--update",
+                    action='store_true',
+                    dest="update_profiles",
+                    help="Save profile data on completion")
 args = parser.parse_args()
 
 profiles_generator = ProfileGenerator()
@@ -53,3 +57,8 @@ try:
 except KeyboardInterrupt:
     eprint(f"\nStopping Event Stream.  {event_generator._total_count} in "
            "total generated.", Palatte.BLUE)
+finally:
+    if args.update_profiles:
+        eprint(f"Updating the profiles data to {args.profiles_file}",
+               Palatte.BLUE)
+        profiles_generator.save(args.profiles_file)
