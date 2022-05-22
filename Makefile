@@ -4,8 +4,22 @@ test:
 lint:
 	@python3 -m flake8
 
-patch:
+major:
+	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$1;}END{print $$1, $$2, $$3}' VERSION` \
+		&& echo $$NEWVERSION > VERSION \
+		&& git commit -a -m "Version $$NEWVERSION" \
+		&& git tag $$NEWVERSION \
+		&& git push --tag
+
+minor:
 	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$2;}END{print $$1, $$2, $$3}' VERSION` \
+		&& echo $$NEWVERSION > VERSION \
+		&& git commit -a -m "Version $$NEWVERSION" \
+		&& git tag $$NEWVERSION \
+		&& git push --tag
+
+patch:
+	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$3;}END{print $$1, $$2, $$3}' VERSION` \
 		&& echo $$NEWVERSION > VERSION \
 		&& git commit -a -m "Version $$NEWVERSION" \
 		&& git tag $$NEWVERSION \
