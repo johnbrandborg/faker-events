@@ -11,14 +11,14 @@ import sys
 
 from faker_events import EventGenerator
 from faker_events import ProfileGenerator
-
+from faker_events.text_color import eprint, Palatte
 
 parser = ArgumentParser(prog="python -m faker_events",
                         description="Faker Events creates JSON events, and"
                                     " can direct them to Data Streams.")
 parser.add_argument("-n", "--nprofiles",
                     type=int,
-                    default=10,
+                    default=1,
                     dest="num_profiles",
                     help="The number of profiles to create")
 parser.add_argument("-p", "--profiles",
@@ -31,6 +31,10 @@ parser.add_argument("-s", "--script",
                     metavar="FILE",
                     dest="script",
                     help="Event Script to be loaded.")
+parser.add_argument("-u", "--update",
+                    action='store_true',
+                    dest="update_profiles",
+                    help="Save profile data on completion")
 args = parser.parse_args()
 
 profiles_generator = ProfileGenerator()
@@ -43,7 +47,7 @@ if args.script:
         module_path = args.script.rstrip(".py").replace("/", ".")
         event_script = importlib.import_module(module_path)
     except ModuleNotFoundError:
-        print(f"ERROR: No event module named '{args.script}'", file=sys.stderr)
+        eprint(f"ERROR: No event module named '{args.script}'", Palatte.RED)
         sys.exit(1)
 else:
     import faker_events.example  # noqa
@@ -51,5 +55,10 @@ else:
 try:
     event_generator.start()
 except KeyboardInterrupt:
-    print(f"\nStopping Event Stream.  {event_generator._total_count} in",
-          "total generated.", file=sys.stderr)
+    eprint(f"\nStopping Event Stream.  {event_generator._total_count} in "
+           "total generated.", Palatte.BLUE)
+finally:
+    if args.update_profiles:
+        eprint(f"Updating the profiles data to {args.profiles_file}",
+               Palatte.BLUE)
+        profiles_generator.save(args.profiles_file)

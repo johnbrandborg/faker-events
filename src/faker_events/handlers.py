@@ -3,13 +3,15 @@ Stream handlers for sending messages
 """
 
 import json
+from sys import stdout
 
 __all__ = ['Stream']
 
 
 class Stream():
     """
-    A Handler for sending events to a Data Steam. By default events are printed
+    A Handler for sending events to a Data Steam. By default events are writen
+    to standard out on the console.
 
     Parameters
     ----------
@@ -34,7 +36,7 @@ class Stream():
         self.key = key
 
         if stype == 'console':
-            self.send = lambda message: print(json.dumps(message))
+            self._setup_console()
         elif stype == 'kafka':
             self._setup_kafka()
         elif stype == 'kinesis':
@@ -42,7 +44,12 @@ class Stream():
         else:
             raise ValueError('Unknown stream type')
 
-    def _setup_kafka(self) -> object:
+    def _setup_console(self):
+        def send(message):
+            stdout.write(json.dumps(message) + '\n')
+        self.send = send
+
+    def _setup_kafka(self) -> None:
         if self.host is None:
             raise ValueError('A host name  must be supplied with Kafka')
 
@@ -57,7 +64,7 @@ class Stream():
             producer.send(topic=self.name, value=formatted)
         self.send = send
 
-    def _setup_kinesis(self) -> object:
+    def _setup_kinesis(self):
         if self.name is None:
             raise ValueError('A stream "name" must be supplied with kinesis')
 

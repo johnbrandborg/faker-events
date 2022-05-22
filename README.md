@@ -43,17 +43,11 @@ Set the "Events Per Minute" on the start method to change the maximum
 allowed, but subject to system performance also.  The default is ~60 per
 minute, but they are random so expect potentially lower rates.
 
-If you want to see a demo of this without writing code, run faker_events as a
- module from the command line.  CTRL-C to stop the event stream.
+If you want to see a demo of this without writing code, run faker_events
+from the command line.  For help in using the CLI use the -h parameter.  
 
 ```shell
-make demo
-```
-
-or
-
-```shell
-python3 -m faker_events
+faker_events -n 10
 ```
 
 Output
@@ -69,6 +63,29 @@ Output
 {"event_time": "2022-05-19T22:43:44.121750", "type": "example", "event_id": "3", "user_id": "1001", "first_name": "Lauren", "last_name": "Rodriguez", "spent": 93, "status": "normal"}
 ```
 
+#### Running a Faker Event Script
+
+You can work with Faker Events interactively in Python, or you can just use
+the class structures in a Python script, and call it using the command line
+interface.
+
+```shell
+faker_events -s fake_users_flow.py -n 1
+```
+
+If you prefer to use Python diretly, use the `start` method on an
+EventGenerator instance, to begin the steam.
+
+
+#### Saving the Profile Data
+
+The profile information created by Faker Events can be saved, so multiple runs
+of the python script will contain the same profile details.
+
+```shell
+faker_events -s fake_users_flow.py -n 100 -p profiles.json
+```
+
 ### Using Stream Handlers
 Once you have installed Faker Events with the Stream type you want you
 can now use a stream handler to send the JSON messages to Kakfa, or
@@ -76,41 +93,46 @@ Kinesis.
 
 **Kafka**
 ```python
-import faker_events
+from faker_events import EventGenerator, Stream
 
-example = faker_events.Stream(stype='kafka', host='kafka:9092', name='example')
-eg = faker_events.EventGenerator()
-eg.set_stream(example)
-eg.start()
+example = Stream(stype='kafka', host='kafka:9092', name='example')
+EventGenerator.set_stream(example)
 ```
 
 **Kinesis**
 ```python
-import faker_events
+from faker_events import EventGenerator, Stream
 
-example = faker_events.Stream(stype='kinesis', name='example', key='key')
-eg.set_stream(example)
-eg = faker_events.EventGenerator(stream=example)
-eg.start()
+example = Stream(stype='kinesis', name='example', key='key')
+EventGenerator.set_stream(example)
+```
+
+Creating a custom Stream handler is easy.  Just create a Class that has a
+`send` method, which takes the Dictionary of data, and then deliveries it.
+
+**Custom Handler**
+```python
+class custom_stream():
+    def __init__(self, *args, **kwargs):
+        # Store Parameters and Connect to destination
+
+    def send(self, message: Dict) -> None:
+        # Do something with the message
 ```
 
 ### Starting a Batch
 Create an Event Generator and use the batch method, with a start and finish
 datetime object, and the frequncy like on the live stream.
 
-
 ```python
 from datetime import datetime, timedelta
 
-import faker_events
-
-eg = faker_events.EventGenerator()
+from faker_events import EventGenerator
 
 start = datetime(2019, 1, 1)  # No one wants to relive 2020...
 finish = start + timedelta(seconds=10)
 
-eg.batch(start, finish)
-eg.start()
+EventGenerator.batch(start, finish)
 ```
 
 ## Data Points
@@ -127,9 +149,10 @@ By default the Event time is local time.  Set the timezone on the generator
 when required.
 
 ### Profile Data Points
-When you create the Event Generator, the profiles you will use in the events
-are created with a number of data points. Below is a list of attributes that
-can be used on the 'profile' within the Event Profiler function.
+When you use the Event Generator, the profiles you will use are created by the
+Profile Generator.  Each profile holds a number of data points. Below is a
+list of attributes that can be used on the 'profile' within the Event Profiler
+function.
 
 * id
 * uuid
@@ -202,9 +225,7 @@ def profiler(event, profile):
         'Profiled': profile.email,
     }
 
-eg = EventGenerator()
-eg.set_first_events(Event(event, profiler))
-eg.start()
+EventGenerator.set_first_events(Event(event, profiler))
 ```
 
 ## Event Sequences
@@ -219,23 +240,20 @@ can be use to set the next event.
 ```python
 from faker_events import Event, EventGenerator
 
-eg = EventGenerator()
-
 a = Event({'Name': 'A'})
 b = Event({'Name': 'B'}, limit=2)
 c = Event({'Name': 'C'})
 
-eg.set_first_events(a)
 a.next = b
 b.next = c
 
 # Short form:
 # a >> b >> c
 
-eg.start()
+EventGenerator.set_first_events(a)
 ```
 
-**Output**
+Output
 ```json
 {"Name": "A"}
 {"Name": "B"}
@@ -243,7 +261,7 @@ eg.start()
 {"Name": "C"}
 ```
 
-#### Group
+#### Grouping
 If you need to two different events to be grouped together, you can set the
 group_by parameter to true on the Event instance creation.  This will cause the
 start and batch methods to send them together.
@@ -270,11 +288,10 @@ The generator has 2 profiles, and 1 of each event type, resulting in 4 events.
  attempting to switch to the next event, even if one is set.)
 
 ```python
-from faker_events import EventGenerator, Event
+from faker_events import Event, EventGenerator
 from faker import Faker
 
 faker = Faker()
-eg = EventGenerator()
 
 customer = {'Name': 'Unknown', 'Job': None, 'Created': None, 'Updated': None}
 
@@ -295,13 +312,12 @@ def change_job(event, profile):
 new_customer_event = Event(customer, new_customer)
 customer_marriged_event = Event(customer, change_job)
 
-eg.set_first_events(new_customer_event)
 new_customer_event >> customer_marriged_event
 
-eg.start()
+EventGenerator.set_first_events(new_customer_event)
 ```
 
-Output
+Output (with two profiles)
 ```json
 {"Name": "Ian", "Job": "Medical technical officer", "Created": "2021-09-28T15:13:55.809062", "Updated": "2021-09-28T15:13:55.809062"}
 {"Name": "Eduardo", "Job": "Conservation officer, nature", "Created": "2021-09-28T15:13:56.316593", "Updated": "2021-09-28T15:13:56.316593"}
@@ -317,7 +333,6 @@ previous events.
 ```python
 from faker_events import Event, EventGenerator
 
-eg = EventGenerator()
 
 event_a = {'Name': 'A', 'LastEvent': 'none'}
 
@@ -339,10 +354,9 @@ a = Event(event_a, profiler_a, 1)
 b = Event(event_b, profiler_b, 1)
 c = Event(event_c, profiler_c, 1)
 
-eg.set_first_events(a)
 a >> b >> c
 
-eg.start()
+EventGenerator.set_first_events(a)
 ```
 
 Output
@@ -359,8 +373,6 @@ multiple Event Flows for each profile created, creating complex event streams.
 ```python
 from faker_events import Event, EventGenerator
 
-eg = EventGenerator()
-
 flow_a1 = Event({"Name": "A1"})
 flow_aa1 = Event({"Name": "AA1"})
 flow_aa2 = Event({"Name": "AA2"})
@@ -369,11 +381,10 @@ flow_b1 = Event({"Name": "B1"})
 flow_bb1 = Event({"Name": "BB1"})
 flow_bb2 = Event({"Name": "BB2"})
 
-eg.set_first_events([flow_a1, flow_b1])
 flow_a1 >> [flow_aa1, flow_aa2]
 flow_b1 >> [flow_bb1, flow_bb2]
 
-eg.start()
+EventGeneratoe.set_first_events([flow_a1, flow_b1])
 ```
 
 Output
@@ -385,6 +396,10 @@ Output
 {"Name": "AA2"}
 {"Name": "BB1"}
 ```
+
+### To Do List
+- [ ] Scheduling events with Cron syntax in Batch Mode.
+- [ ] Edge Case testing to produce bad or corrupted data on purpose.
 
 ## License
 Faker-Events is released under the MIT License. See the bundled LICENSE file for details.

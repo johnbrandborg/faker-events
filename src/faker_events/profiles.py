@@ -5,10 +5,10 @@ objects.
 
 import json
 from random import choice
-from sys import stderr
 from types import SimpleNamespace
 
 from faker import Faker
+from .text_color import eprint, Palatte
 
 
 class ProfileGenerator():
@@ -50,14 +50,15 @@ class ProfileGenerator():
                         if index < num_profiles
                     ]
             except FileNotFoundError:
+                eprint(f"No profiles file {profiles_file} found. Creating "
+                       "the file now.", Palatte.BLUE)
                 self.create(num_profiles)
                 self.save(profiles_file)
             if num_profiles > len(self.entries):
-                print("WARNING: The number of profiles requested, '{}', "
-                      "exceeds the profiles file. Consider recreating and "
-                      "writing the profiles again."
-                      .format(num_profiles),
-                      file=stderr)
+                eprint("WARNING: The number of profiles requested, '{}', "
+                       "exceeds the profiles file. Consider recreating and "
+                       "writing the profiles again.".format(num_profiles),
+                       Palatte.YELLOW)
         else:
             self.create(num_profiles)
 

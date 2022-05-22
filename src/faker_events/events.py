@@ -7,11 +7,11 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from hashlib import md5
 from random import randint, random
-from sys import stderr
 
 from croniter import croniter
 from .handlers import Stream
 from .profiles import ProfileGenerator
+from .text_color import eprint, Palatte
 
 __all__ = ['Event', 'EventGenerator']
 
@@ -215,8 +215,8 @@ class EventGenerator():
                 self._state_table[sindex]['events'][eindex]['remain'] -= 1
                 self._process_state_entry(sindex, eindex)
 
-        print(f"Event limit reached.  {self._total_count} in total generated",
-              file=stderr)
+        eprint(f"Event limit reached.  {self._total_count} in total generated",
+               Palatte.BLUE)
 
     @classmethod
     def set_first_events(cls, events: list, *args) -> None:
@@ -262,8 +262,8 @@ class EventGenerator():
             try:
                 cls._timezone = timezone(timedelta(hours=offset))
             except ValueError:
-                print("WARNING: Offset must be between -24 and 24 hours",
-                      file=stderr)
+                eprint("WARNING: Offset must be between -24 and 24 hours",
+                       Palatte.YELLOW)
         else:
             cls._timezone = None
 
@@ -275,10 +275,10 @@ class EventGenerator():
         self._state_table = None
 
         if self._dtstamp:
-            print('Starting Batch Steam', file=stderr)
+            eprint('Starting Batch Steam', Palatte.BLUE)
             self._batch_stream()
         else:
-            print('Starting Live Stream', file=stderr)
+            eprint('Starting Live Stream', Palatte.BLUE)
             asyncio.run(self._live_stream())
 
     def _batch_stream(self):
@@ -292,9 +292,9 @@ class EventGenerator():
                 self._total_count += 1
 
             if self._dtstamp >= self._dtcutoff:
-                print("Batch Steam finish datetime reached.  "
-                      f"{self._total_count} in total generated",
-                      file=stderr)
+                eprint("Batch Steam finish datetime reached.  "
+                       f"{self._total_count} in total generated",
+                       Palatte.BLUE)
                 return
 
             self._dtstamp += timedelta(seconds=delay)
@@ -390,8 +390,8 @@ class EventGenerator():
             if schedule:
                 await asyncio.sleep(60)
 
-        print(f"Schedule limit reached.  {self._total_count} in total "
-              "generated", file=stderr)
+        eprint(f"Schedule limit reached.  {self._total_count} in total "
+               "generated", Palatte.BLUE)
 
     def _process_state_entry(self, sindex: int, eindex: int) -> None:
         """

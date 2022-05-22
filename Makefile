@@ -1,8 +1,5 @@
-demo:
-	@python3 -m faker_events
-
 test:
-	@python3 -m pytest -vv
+	@python3 -m pytest
 
 lint:
 	@python3 -m flake8
@@ -24,7 +21,6 @@ help:
 	@echo "\
 Targets\n\
 ------------------------------------------------------------------------\n\
- demo:		Demonstrate the output created by Faker Events\n\
  test:		Perform unit testing on the source code\n\
  lint:		Perform quality checks on the source code\n\
  patch:		Creates an incremented Patch Tag\n\
