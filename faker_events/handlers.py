@@ -5,6 +5,8 @@ Stream handlers for sending messages
 import json
 from sys import stdout
 
+from .text_color import eprint, Palatte
+
 __all__ = ['Stream']
 
 
@@ -50,6 +52,7 @@ class Stream():
         self.send = send
 
     def _setup_kafka(self) -> None:
+        eprint("Logging to Kafka", Palatte.BLUE)
         if self.host is None:
             raise ValueError('A host name  must be supplied with Kafka')
 
@@ -57,14 +60,16 @@ class Stream():
             raise ValueError('A stream "name" must be supplied with kinesis')
 
         from kafka import KafkaProducer
-        producer = KafkaProducer(bootstrap_servers=[self.host])
+        producer = KafkaProducer(
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            bootstrap_servers=[self.host])
 
-        def send(message):
-            formatted = json.dumps(message).encode()
-            producer.send(topic=self.name, value=formatted)
-        self.send = send
+        def send_kafka(message):
+            producer.send(topic=self.name, value=message)
+        self.send = send_kafka
 
     def _setup_kinesis(self):
+        eprint("Logging to Kinesis", Palatte.BLUE)
         if self.name is None:
             raise ValueError('A stream "name" must be supplied with kinesis')
 

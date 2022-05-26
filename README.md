@@ -47,7 +47,7 @@ If you want to see an example of this without writing code, run faker_events
 from the command line.  For help in using the CLI use the -h parameter.
 
 ```shell
-faker_events -n 10
+faker-events -n 10
 ```
 
 Output
@@ -74,7 +74,7 @@ the class structures in a Python script, and call it using the command line
 interface.
 
 ```shell
-faker_events -s fake_users_flow.py -n 1
+faker-events -s fake_users_flow.py -n 1
 ```
 
 If you prefer to use Python diretly, use the `start` method on an
@@ -87,7 +87,7 @@ The profile information created by Faker Events can be saved, so multiple runs
 of the python script will contain the same profile details.
 
 ```shell
-faker_events -s fake_users_flow.py -n 100 -p profiles.json
+faker-events -s fake_users_flow.py -n 100 -p profiles.json
 ```
 
 ### Using Stream Handlers
