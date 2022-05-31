@@ -19,13 +19,15 @@ def clear_data(message: dict) -> None:
     value_type = type(message.get(selected_key))
 
     if value_type is float:
-        message[selected_key] = 0.0
+        new_value = 0.0
 
     if value_type is int:
-        message[selected_key] = 0
+        new_value = 0
 
     if value_type is str:
-        message[selected_key] = ""
+        new_value = ""
+
+    message[selected_key] = new_value
 
 
 def change_type(message: dict) -> None:
@@ -38,22 +40,20 @@ def change_type(message: dict) -> None:
 
     if value_type is float:
         new_type = choices([int, str])[0]
-        message[selected_key] = new_type(message[selected_key])
 
     if value_type is int:
         new_type = choices([float, str])[0]
-        message[selected_key] = new_type(message[selected_key])
 
     if value_type is bool:
         new_type = choices([float, int, str])[0]
-        message[selected_key] = new_type(message[selected_key])
 
     if value_type is str:
-        try:
-            new_type = choices([float, int, str])[0]
-            message[selected_key] = new_type(message[selected_key])
-        except ValueError:
-            pass
+        new_type = choices([float, int, bool])[0]
+
+    try:
+        message[selected_key] = new_type(message[selected_key])
+    except ValueError:
+        pass
 
 
 _duplication_cache = {}
