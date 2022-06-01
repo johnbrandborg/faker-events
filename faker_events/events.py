@@ -6,7 +6,7 @@ import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from hashlib import md5
-from random import randint, random
+from random import randint, uniform
 
 from croniter import croniter
 from .handlers import Stream
@@ -33,8 +33,10 @@ class Event():
         limit: int
             The number of times to process the event. Set to 0 for infinite
             events.
-        epm:
+        epm: int
             The estimate of random 'Events Per Minute' that will be created.
+        variance: int
+            What percentage of variance to occur between events. From 0 to 100.
         group_up: bool
             If set to true the next event will occur at the same time when
             using the batch or live_stream methods of the generator.
@@ -49,15 +51,25 @@ class Event():
                  profiler: callable = None,
                  limit: int = 1,
                  epm: int = 60,
+                 variance: int = 25,
                  group_up: bool = False,
                  cron: str = None):
         self.profiler = profiler
         self.limit = int(limit)
-        self.epm = int(epm)
         self.group_up = group_up
         self.cron = cron
         self._data = self._get_data(data)
         self._next_events = None
+
+        if 0 < variance < 100:
+            eprint("WARNING: Event variance should be set between 0 and 100.",
+                   Palatte.YELLOW)
+            variance = 25
+
+        self.seconds_delay = 60 / epm
+        offset = self.seconds_delay * (variance / 100)
+        self.seconds_low = self.seconds_delay - offset
+        self.seconds_high = self.seconds_delay + offset
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}"
@@ -206,7 +218,14 @@ class EventGenerator():
             else:
                 event_time = datetime.now(self._timezone).isoformat()
 
-            delay = None if event.group_up else random() * 60/event.epm
+            if event.group_up:
+                delay = None
+            elif event.seconds_delay != event.seconds_low \
+                    and event.seconds_delay != event.seconds_high:
+                delay = uniform(event.seconds_low, event.seconds_high)
+            else:
+                delay = event.seconds_delay
+
             yield (*event.process(pindex,
                                   self.profiles.entries,
                                   time=event_time), delay)

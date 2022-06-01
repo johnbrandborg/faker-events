@@ -36,18 +36,20 @@ pip install faker-events[kinesis]
 ```
 
 ### Starting a Stream
-Create an Event Generator and start using Live Stream. By default only 10
-profiles are created.  Giving large numbers can take sometime to build.
+Create an Event Generator and start using Live Stream. By default only 1
+profile is created.  Giving large numbers of profiles can take sometime to
+build, but you can always save them by supplying the profile file name.
 
-Set the "Events Per Minute" on the start method to change the maximum
-allowed, but subject to system performance also.  The default is ~60 per
-minute, but they are random so expect potentially lower rates.
+Set the "Events Per Minute" when creating the event to change the maximum
+allowed, but subject to system performance also.  The default is 60 per
+minute with a variance of 25%.  Setting the variance to 0% will cause the
+events to not be random.
 
 If you want to see an example of this without writing code, run faker_events
 from the command line.  For help in using the CLI use the -h parameter.
 
 ```shell
-faker-events -n 10
+faker-events -n 10 -p profiles.json
 ```
 
 Output
