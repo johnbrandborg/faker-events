@@ -66,7 +66,7 @@ Output
 ```
 
 If you would like to know more about how this Event Flow was created, read the
-[Example documentation](docs/Example.MD).
+[Example documentation](https://github.com/johnbrandborg/faker-events/blob/main/docs/Example.MD).
 
 
 #### Running a Faker Event Script
