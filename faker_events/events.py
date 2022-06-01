@@ -56,20 +56,12 @@ class Event():
                  cron: str = None):
         self.profiler = profiler
         self.limit = int(limit)
+        self.epm = int(epm)
+        self.variance = int(variance)
         self.group_up = group_up
         self.cron = cron
         self._data = self._get_data(data)
         self._next_events = None
-
-        if 0 < variance < 100:
-            eprint("WARNING: Event variance should be set between 0 and 100.",
-                   Palatte.YELLOW)
-            variance = 25
-
-        self.seconds_delay = 60 / epm
-        offset = self.seconds_delay * (variance / 100)
-        self.seconds_low = self.seconds_delay - offset
-        self.seconds_high = self.seconds_delay + offset
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}"
@@ -102,6 +94,26 @@ class Event():
         if dict_hash not in cls._event_store:
             cls._event_store[dict_hash] = {"id": 0, "template": template}
         return cls._event_store[dict_hash]
+
+    @property
+    def variance(self):
+        """
+        View the variance, or use a statement to set the variance.
+        """
+        return self._variance
+
+    @variance.setter
+    def variance(self, value):
+        if not 0 <= value <= 100:
+            eprint("WARNING: Event variance should be set between 0 and 100."
+                   f" {value} is not valid.  Defaulting to 25.",
+                   Palatte.YELLOW)
+            value = 25
+        self._variance = value
+        self.seconds_delay = 60 / self.epm
+        offset = self.seconds_delay * (self._variance / 100)
+        self.seconds_low = self.seconds_delay - offset
+        self.seconds_high = self.seconds_delay + offset
 
     @property
     def next(self):
