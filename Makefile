@@ -37,6 +37,8 @@ Targets\n\
 ------------------------------------------------------------------------\n\
  test:		Perform unit testing on the source code\n\
  lint:		Perform quality checks on the source code\n\
+ major:		Creates an incremented Major Tag\n\
+ minor:		Creates an incremented Minor Tag\n\
  patch:		Creates an incremented Patch Tag\n\
  develop:	Installs all requirements and testing requirements\n\
  clean:		Removes built Python Packages and cached byte code\n\
