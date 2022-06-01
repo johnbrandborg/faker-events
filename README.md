@@ -116,7 +116,7 @@ Creating a custom Stream handler is easy.  Just create a Class that has a
 
 **Custom Handler**
 ```python
-class custom_stream():
+class CustomStream():
     def __init__(self, *args, **kwargs):
         # Store Parameters and Connect to destination
 

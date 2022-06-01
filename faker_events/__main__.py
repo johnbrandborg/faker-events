@@ -44,7 +44,7 @@ event_generator = EventGenerator(profiles_generator)
 if args.script:
     try:
         sys.path.append(os.getcwd())
-        module_path = args.script.rstrip(".py").replace("/", ".")
+        module_path = os.path.splitext(args.script)[0].replace("/", ".")
         event_script = importlib.import_module(module_path)
     except ModuleNotFoundError:
         eprint(f"ERROR: No event module named '{args.script}'", Palatte.RED)
