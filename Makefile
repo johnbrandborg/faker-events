@@ -5,14 +5,14 @@ lint:
 	@python3 -m flake8
 
 major:
-	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$1;}END{print $$1, $$2, $$3}' VERSION` \
+	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$1;}END{print $$1, 0, 0}' VERSION` \
 		&& echo $$NEWVERSION > VERSION \
 		&& git commit -a -m "Version $$NEWVERSION" \
 		&& git tag $$NEWVERSION \
 		&& git push --tag
 
 minor:
-	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$2;}END{print $$1, $$2, $$3}' VERSION` \
+	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$2;}END{print $$1, $$2, 0}' VERSION` \
 		&& echo $$NEWVERSION > VERSION \
 		&& git commit -a -m "Version $$NEWVERSION" \
 		&& git tag $$NEWVERSION \
