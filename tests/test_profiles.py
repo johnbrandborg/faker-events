@@ -97,11 +97,11 @@ def test_generator_profile_file_create():
     mopen = mock_open()
     mopen.side_effect = [FileNotFoundError, mopen.return_value]
 
-    with patch('faker_events.profiles.open', mopen):
+    with patch('builtins.open', mopen):
         profiles_generator = ProfileGenerator()
-        profiles_generator.load(num_profiles=1, profiles_file='test')
+        profiles_generator.load(num_profiles=1, profiles_file='test.json')
 
-        mopen.assert_called_with('test', 'w', encoding='utf-8')
+        mopen.assert_called_with('test.json', 'w', encoding='utf-8')
 
 
 def test_generator_can_accept_faker_instance():
