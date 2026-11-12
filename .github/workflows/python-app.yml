@@ -45,7 +45,7 @@ jobs:
       with:
         args: >
           -Dsonar.organization=johnbrandborg
-          -Dsonar.projectKey=johnbrandborg_faker-events
+          -Dsonar.projectKey=faker-events
           -Dsonar.python.coverage.reportPaths=coverage.xml
           -Dsonar.python.version=${{ matrix.python-version }}
           -Dsonar.sources=faker_events/
