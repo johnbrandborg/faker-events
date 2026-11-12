@@ -32,9 +32,7 @@ def test_sign_in_flow():
         config=GeneratorConfig(seed=42),
     )
 
-    generated = list(
-        generator.generate(start=datetime(2026, 1, 1, tzinfo=UTC))
-    )
+    generated = list(generator.generate(start=datetime(2026, 1, 1, tzinfo=UTC)))
 
     assert [item.data["event_id"] for item in generated] == [1, 2]
     assert [item.data["user_id"] for item in generated] == ["1000", "1000"]

@@ -124,8 +124,7 @@ The builder must return an `EventGenerator`. Accepting `**options` is also
 valid:
 
 ```python
-def build(profiles, output, **options):
-    ...
+def build(profiles, output, **options): ...
 ```
 
 Use the supplied output to preserve CLI JSON and `--pretty` behavior. Library
