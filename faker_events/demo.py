@@ -5,7 +5,7 @@ from typing import Any
 from faker import Faker
 
 from .engine import Event, EventGenerator
-from .models import EventContext, GeneratorConfig, Profile
+from .models import EventContext, GeneratorConfig, Profile, State
 from .outputs import Output
 
 
@@ -20,14 +20,16 @@ def build(
     if seed is not None:
         fake.seed_instance(seed)
 
-    account_template: dict[str, Any] = {
-        "type": "account.opened",
-        "event_id": 0,
-        "event_time": "",
-        "user_id": "",
-        "name": "",
-        "balance": 0,
-    }
+    account = State(
+        {
+            "type": "account.opened",
+            "event_id": 0,
+            "event_time": "",
+            "user_id": "",
+            "name": "",
+            "balance": 0,
+        }
+    )
 
     def open_account(context: EventContext, profile: Profile) -> dict[str, Any]:
         return {
@@ -38,15 +40,22 @@ def build(
         }
 
     def payment(context: EventContext, _profile: Profile) -> dict[str, Any]:
+        context.state["balance"] += fake.random_int(5, 250)
         return {
             "type": "payment.received",
             "event_id": context.id,
             "event_time": context.time.isoformat(),
-            "balance": context.data["balance"] + fake.random_int(5, 250),
+            "balance": context.state["balance"],
         }
 
-    opened = Event(account_template, open_account, name="account.opened")
-    paid = Event(account_template, payment, limit=3, rate=120, name="payment.received")
+    opened = Event(account, open_account, name="account.opened")
+    paid = Event(
+        account,
+        payment,
+        limit=3,
+        rate=120,
+        name="payment.received",
+    )
     opened >> paid
 
     return EventGenerator(

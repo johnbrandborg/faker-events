@@ -3,8 +3,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from faker_events import ProfileGenerator, __version__
+from faker_events import MemoryOutput, Profile, ProfileGenerator, __version__
 from faker_events.cli import app
+from faker_events.demo import build
 
 
 def test_profiles_are_deterministic() -> None:
@@ -62,6 +63,23 @@ def test_cli_runs_built_in_demo() -> None:
     assert "Delivered 1 event(s)." in result.stderr
 
 
+def test_demo_payments_retain_opened_account_state() -> None:
+    generator = build(
+        [Profile(id="1000", name="Ada")],
+        MemoryOutput(),
+        seed=42,
+    )
+
+    events = [generated.data for generated in generator.generate()]
+
+    assert events[0]["type"] == "account.opened"
+    assert [event["user_id"] for event in events] == ["1000"] * 4
+    assert [event["name"] for event in events] == ["Ada"] * 4
+    balances = [event["balance"] for event in events]
+    assert balances == sorted(balances)
+    assert balances[0] == 0 < balances[-1]
+
+
 def test_cli_loads_user_script(tmp_path: Path) -> None:
     script = tmp_path / "flow.py"
     script.write_text("from faker_events.demo import build\n", encoding="utf-8")
@@ -73,6 +91,45 @@ def test_cli_loads_user_script(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert '"type":"account.opened"' in result.stdout
+
+
+def test_cli_can_persist_profile_mutations(tmp_path: Path) -> None:
+    script = tmp_path / "mutate.py"
+    script.write_text(
+        """
+from faker_events import Event, EventGenerator
+
+def build(profiles, output, **_options):
+    def mutate(_context, profile):
+        profile.last_event = "saved"
+    return EventGenerator(profiles, Event({"type": "saved"}, mutate), output=output)
+""",
+        encoding="utf-8",
+    )
+    profiles = tmp_path / "profiles.json"
+    existing = ProfileGenerator()
+    existing.entries = [
+        Profile.model_validate({"id": "1000", "name": "Ada", "existing_custom_field": "kept"})
+    ]
+    existing.save(profiles)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "run",
+            str(script),
+            "--profile-file",
+            str(profiles),
+            "--update-profiles",
+        ],
+    )
+
+    assert result.exit_code == 0
+    loaded = ProfileGenerator().load(profiles)
+    extra = loaded[0].model_extra
+    assert extra is not None
+    assert extra["last_event"] == "saved"
+    assert extra["existing_custom_field"] == "kept"
 
 
 def test_cli_rejects_script_without_builder(tmp_path: Path) -> None:

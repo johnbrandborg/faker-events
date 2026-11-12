@@ -62,13 +62,26 @@ def run(
         Path | None,
         typer.Option("--profile-file", "-p", help="Load or create reusable profiles."),
     ] = None,
+    update_profiles: Annotated[
+        bool,
+        typer.Option(
+            "--update-profiles",
+            "-u",
+            help="Save profile mutations after the run. Requires --profile-file.",
+        ),
+    ] = False,
     seed: Annotated[
         int | None,
         typer.Option(help="Seed profile, flow, and demo randomness."),
     ] = None,
     max_events: Annotated[
         int | None,
-        typer.Option("--max-events", "-m", min=1, help="Stop after this many flow events."),
+        typer.Option(
+            "--max-events",
+            "-m",
+            min=1,
+            help="Stop after this many processing attempts, including skipped events.",
+        ),
     ] = None,
     start: Annotated[
         datetime | None,
@@ -87,19 +100,25 @@ def run(
 
     if (start is None) != (end is None):
         raise typer.BadParameter("--start and --end must be supplied together")
+    if update_profiles and profile_file is None:
+        raise typer.BadParameter("--update-profiles requires --profile-file")
 
-    entities = ProfileGenerator(seed=seed).load_or_create(profiles, profile_file)
+    profile_generator = ProfileGenerator(seed=seed)
+    entities = profile_generator.load_or_create(profiles, profile_file)
     output = ConsoleOutput(pretty=pretty)
     generator = _build_generator(script, entities, output, seed, max_events)
 
-    if start is not None and end is not None:
-        delivered = asyncio.run(generator.run_batch(start, end))
-    else:
-        try:
+    try:
+        if start is not None and end is not None:
+            delivered = asyncio.run(generator.run_batch(start, end))
+        else:
             delivered = asyncio.run(generator.run_live())
-        except KeyboardInterrupt:
-            typer.echo("Stream stopped.", err=True)
-            raise typer.Exit(130) from None
+    except KeyboardInterrupt:
+        typer.echo("Stream stopped.", err=True)
+        raise typer.Exit(130) from None
+    finally:
+        if update_profiles and profile_file is not None:
+            profile_generator.save(profile_file)
     typer.echo(f"Delivered {delivered} event(s).", err=True)
 
 
