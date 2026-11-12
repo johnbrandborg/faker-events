@@ -14,6 +14,17 @@ Version 2 is a ground-up rewrite for Python 3.11+. It provides isolated
 generator state, deterministic runs, validated configuration, async delivery,
 virtual-time batches, cron schedules, and fast JSON serialization.
 
+## Core concepts
+
+- **Profiles** are people or entities that act independently.
+- **State** is persistent data belonging to one profile, such as an account
+  balance or status.
+- **Activity events** simulate actions performed by people or external actors.
+- **Scheduled operations** simulate recurring system work against current
+  profile state.
+- **Outputs** deliver immutable event snapshots to JSON Lines, Kafka, Kinesis,
+  or custom destinations.
+
 ## Install
 
 ```shell
@@ -103,6 +114,10 @@ generator.start()
 lets human activity and system operations inspect and mutate the same entity
 without leaking state globally.
 
+See [Stateful activity and scheduled operations](docs/state-and-schedules.md)
+for detailed semantics, conditional operations, expected output, and a runnable
+savings example.
+
 For a v1-style shared event structure, use `State` directly as the template:
 
 ```python
@@ -143,6 +158,11 @@ The CLI accepts a Python file exposing
 ```shell
 faker-events run account_flow.py --profiles 10
 ```
+
+Runnable examples:
+
+- [`examples/savings.py`](examples/savings.py) — shared account state with
+  recurring conditional fees.
 
 ## Outputs
 

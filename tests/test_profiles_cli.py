@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -91,6 +92,33 @@ def test_cli_loads_user_script(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert '"type":"account.opened"' in result.stdout
+
+
+def test_documented_savings_example_runs() -> None:
+    example = Path(__file__).parents[1] / "examples" / "savings.py"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "run",
+            str(example),
+            "--profiles",
+            "1",
+            "--start",
+            "2026-01-01T00:00:00+00:00",
+            "--end",
+            "2026-01-01T00:02:00+00:00",
+        ],
+    )
+
+    assert result.exit_code == 0
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [(event["type"], event["change"], event["total"]) for event in events] == [
+        ("money.saved", 10, 10),
+        ("money.saved", 110, 120),
+        ("account.fee", -10, 110),
+        ("account.fee", -10, 100),
+    ]
 
 
 def test_cli_can_persist_profile_mutations(tmp_path: Path) -> None:

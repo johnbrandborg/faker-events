@@ -84,7 +84,7 @@ select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
 python-version = "3.11"
 
 [tool.ty.src]
-include = ["faker_events", "tests"]
+include = ["examples", "faker_events", "tests"]
 
 [tool.ty.terminal]
 error-on-warning = false
