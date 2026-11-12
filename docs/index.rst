@@ -139,7 +139,6 @@ Upgrading and reference
    :maxdepth: 2
 
    migrating-from-v1
-   v1-v2-regression-assessment
    api
 
 Indices

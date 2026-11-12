@@ -4,9 +4,8 @@ Version 2 is a ground-up rewrite. It retains stateful profiles, event
 sequences, random timing, scheduled operations, and streaming outputs while
 removing global configuration and implicit shared state.
 
-This guide is an upgrade checklist. See the
-[full regression assessment](v1-v2-regression-assessment.md) for the detailed
-behavior matrix and deliberate removals.
+This guide is an upgrade checklist covering the required API and behavior
+changes.
 
 ## Requirements
 
