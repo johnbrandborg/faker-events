@@ -3,8 +3,8 @@
 [![CI](https://github.com/johnbrandborg/faker-events/actions/workflows/python-app.yml/badge.svg)](https://github.com/johnbrandborg/faker-events/actions/workflows/python-app.yml)
 [![PyPI](https://img.shields.io/pypi/v/faker-events.svg)](https://pypi.org/project/faker-events/)
 [![Python](https://img.shields.io/pypi/pyversions/faker-events.svg)](https://pypi.org/project/faker-events/)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_faker-events&metric=alert_status&branch=main)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_faker-events&branch=main)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_faker-events&metric=coverage&branch=main)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_faker-events&branch=main)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=faker-events&metric=alert_status&branch=main)](https://sonarcloud.io/summary/new_code?id=faker-events&branch=main)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=faker-events&metric=coverage&branch=main)](https://sonarcloud.io/summary/new_code?id=faker-events&branch=main)
 [![License](https://img.shields.io/pypi/l/faker-events.svg)](https://github.com/johnbrandborg/faker-events/blob/main/LICENSE)
 
 Generate realistic, stateful event streams for development, demos, load tests,
