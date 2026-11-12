@@ -127,8 +127,23 @@ Faker can mix multiple locales:
 fake = Faker(["en_GB", "fr_FR", "de_DE"])
 ```
 
-Not every provider exists for every locale. Faker falls back to a supported
-provider where possible.
+Not every provider exists for every locale. Faker selects a locale that
+supports the requested provider where possible.
+
+Multi-locale Faker instances need extra care when they are seeded. Calling
+`seed_instance()` gives every internal locale generator the same seed. Methods
+that do not depend on locale data, including `uuid4()`, can then produce the
+same sequence in each locale. Use a single-locale Faker for identifiers, or
+seed each locale differently:
+
+```python
+fake = Faker(["en_GB", "fr_FR", "de_DE"])
+
+for index, locale in enumerate(fake.locales):
+    fake.seed_locale(locale, 42 + index)
+```
+
+Use `seed_locale()` rather than relying on the order of `fake.factories`.
 
 ## Add domain-specific providers
 
@@ -136,13 +151,26 @@ For repeated domain values, define a custom Faker provider instead of
 scattering lists and formatting rules across transforms:
 
 ```python
+from collections import OrderedDict
+
 from faker import Faker
 from faker.providers import BaseProvider
 
 
 class CommerceProvider(BaseProvider):
     def subscription_plan(self):
-        return self.random_element(("free", "pro", "enterprise"))
+        plans = OrderedDict(
+            (
+                ("free", 0.70),
+                ("pro", 0.25),
+                ("enterprise", 0.05),
+            )
+        )
+        return self.random_elements(
+            plans,
+            length=1,
+            use_weighting=True,
+        )[0]
 
     def account_id(self):
         return self.bothify("ACCT-########")
@@ -156,6 +184,30 @@ account_id = fake.account_id()
 ```
 
 Custom providers keep event schemas readable and can be reused across flows.
+Faker normally enables weighting, but passing `use_weighting=True` explicitly
+keeps a provider's weighted choice correct even when its Faker instance was
+created with `use_weighting=False`.
+
+`add_provider()` is not available on a multi-locale Faker proxy. Add the
+provider to each internal generator instead:
+
+```python
+fake = Faker(["en_GB", "fr_FR", "de_DE"])
+
+for locale in fake.locales:
+    fake[locale].add_provider(CommerceProvider)
+```
+
+## Generate coherent locations
+
+Use Faker's
+[`local_latlng()`](https://faker.readthedocs.io/en/stable/providers/faker.providers.geo.html)
+when a city, country, latitude, and longitude must describe the same place.
+Generate them together rather than selecting each field independently.
+
+The available place data varies by country and can be sparse for some locales.
+Inspect the distribution before relying on it for a large or geographically
+varied dataset.
 
 ## Keep generated data coherent
 
