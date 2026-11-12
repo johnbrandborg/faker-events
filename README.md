@@ -138,6 +138,30 @@ Use `event >> next_event` for a sequence and `event >> [a, b]` to branch.
 `limit=0` repeats indefinitely. `max_events` bounds processing attempts,
 including skipped events, so conditional infinite flows can still terminate.
 
+## Event timing
+
+Every activity event can have its own average rate and random variance:
+
+```python
+frequent = Event({"type": "page.viewed"}, rate=120, variance=0.20)
+occasional = Event({"type": "checkout.completed"}, rate=6, variance=0.50)
+fixed = Event({"type": "heartbeat"}, rate=1, variance=0)
+```
+
+`rate` expresses the activity pace in events per minute. The base delay is
+`60 / rate` seconds. After selecting an active event, the generator uses that
+event's rate for the next delay; these are not independent event clocks.
+`variance` is a fraction from `0` to `1`, so a one-second base delay with
+`variance=0.25` varies uniformly from 0.75 to 1.25 seconds.
+
+Live generation sleeps for the calculated delay. Virtual-time batches apply
+the same delay to timestamps without sleeping. Grouped events have no delay
+between them, while scheduled events use their cron expression instead of
+`rate` and `variance`.
+
+See [Event timing](docs/event-timing.md) for formulas, examples, reproducible
+seeds, grouping, and schedule behavior.
+
 ## Live and batch execution
 
 The synchronous interface is suitable for scripts:
