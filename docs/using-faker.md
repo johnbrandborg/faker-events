@@ -54,11 +54,13 @@ def create_order(context, profile):
         "customer_id": profile.id,
         "order_id": fake.uuid4(),
         "product": fake.catch_phrase(),
-        "amount": float(fake.pydecimal(
-            left_digits=3,
-            right_digits=2,
-            positive=True,
-        )),
+        "amount": float(
+            fake.pydecimal(
+                left_digits=3,
+                right_digits=2,
+                positive=True,
+            )
+        ),
         "shipping_address": fake.address(),
     }
 
