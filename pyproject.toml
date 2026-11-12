@@ -34,6 +34,14 @@ dependencies = [
 [project.optional-dependencies]
 kafka = ["confluent-kafka>=2.5"]
 kinesis = ["boto3>=1.34"]
+rtd = [
+    "furo",
+    "myst-parser",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinxext-opengraph",
+]
 all = [
     "boto3>=1.34",
     "confluent-kafka>=2.5",
@@ -50,6 +58,7 @@ dev = [
 faker-events = "faker_events.cli:app"
 
 [project.urls]
+Documentation = "https://faker-events.readthedocs.io/en/stable/"
 Source = "https://github.com/johnbrandborg/faker-events"
 Issues = "https://github.com/johnbrandborg/faker-events/issues"
 
