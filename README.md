@@ -1,6 +1,7 @@
 # Faker Events
 
 [![CI](https://github.com/johnbrandborg/faker-events/actions/workflows/python-app.yml/badge.svg)](https://github.com/johnbrandborg/faker-events/actions/workflows/python-app.yml)
+[![Documentation](https://readthedocs.org/projects/faker-events/badge/?version=latest)](https://faker-events.readthedocs.io/en/latest/)
 [![PyPI](https://img.shields.io/pypi/v/faker-events.svg)](https://pypi.org/project/faker-events/)
 [![Python](https://img.shields.io/pypi/pyversions/faker-events.svg)](https://pypi.org/project/faker-events/)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=faker-events&metric=alert_status&branch=main)](https://sonarcloud.io/summary/new_code?id=faker-events&branch=main)
@@ -16,9 +17,10 @@ virtual-time batches, cron schedules, and fast JSON serialization.
 
 ## Core concepts
 
-- **Profiles** are people or entities that act independently.
-- **State** is persistent data belonging to one profile, such as an account
-  balance or status.
+- **Profiles** are mutable people or entities whose fields can be saved across
+  runs.
+- **State** is per-profile data shared by events during one generator run,
+  such as an account balance or workflow status.
 - **Activity events** simulate actions performed by people or external actors.
 - **Scheduled operations** simulate recurring system work against current
   profile state.
@@ -28,6 +30,21 @@ virtual-time batches, cron schedules, and fast JSON serialization.
 See the [v1→v2 regression assessment](docs/v1-v2-regression-assessment.md) for
 the complete preserved, improved, intentionally changed, and removed behavior
 matrix.
+
+## Documentation
+
+- [Events and flows](docs/events-and-flows.md)
+- [Event timing](docs/event-timing.md)
+- [State lifecycle and persistence](docs/state-lifecycle.md)
+- [Scheduled operations](docs/scheduling.md)
+- [Profiles](docs/profiles.md)
+- [Outputs](docs/outputs.md)
+- [Command-line interface](docs/cli.md)
+- [Testing event flows](docs/testing.md)
+- [Migrating from v1](docs/migrating-from-v1.md)
+
+See the [documentation index](docs/README.md) for examples and the full
+upgrade assessment.
 
 ## Install
 
@@ -116,11 +133,14 @@ generator.start()
 
 `State` is cloned for every profile and generator. Reusing one `State` instance
 lets human activity and system operations inspect and mutate the same entity
-without leaking state globally.
+without leaking state globally. It persists throughout one continuous live or
+batch run and resets when another run starts. Put values on profiles when they
+must survive separate runs.
 
 See [Stateful activity and scheduled operations](docs/state-and-schedules.md)
 for detailed semantics, conditional operations, expected output, and a runnable
-savings example.
+savings example. See [State lifecycle and persistence](docs/state-lifecycle.md)
+for reset boundaries and cross-run profile persistence.
 
 For a v1-style shared event structure, use `State` directly as the template:
 

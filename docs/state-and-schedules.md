@@ -34,7 +34,10 @@ fee = Event(
 
 The generator creates a deep copy of the initial state for every profile.
 Profiles therefore evolve independently, and separate generators do not leak
-state into one another.
+state into one another. State persists throughout one continuous live or batch
+run, including a run spanning multiple days, and resets when another run
+starts. Use profile fields for values that must survive separate runs; see
+[State lifecycle and persistence](state-lifecycle.md).
 
 Transforms access shared state through `context.state`:
 
