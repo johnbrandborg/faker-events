@@ -1,48 +1,31 @@
 test:
-	@python3 -m pytest
+	python3 -m pytest
+
+test_report:
+	python3 -m pytest --cov-report=xml
 
 lint:
-	@python3 -m flake8
+	python3 -m ruff check .
 
-major:
-	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$1;}END{print $$1, 0, 0}' VERSION` \
-		&& echo $$NEWVERSION > VERSION \
-		&& git commit -a -m "Version $$NEWVERSION" \
-		&& git tag $$NEWVERSION \
-		&& git push --tag
+type_check:
+	python3 -m ty check
 
-minor:
-	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$2;}END{print $$1, $$2, 0}' VERSION` \
-		&& echo $$NEWVERSION > VERSION \
-		&& git commit -a -m "Version $$NEWVERSION" \
-		&& git tag $$NEWVERSION \
-		&& git push --tag
+format:
+	python3 -m ruff format .
+	python3 -m ruff check --fix .
 
-patch:
-	@NEWVERSION=`awk 'BEGIN{FS="."; OFS="."}{++$$3;}END{print $$1, $$2, $$3}' VERSION` \
-		&& echo $$NEWVERSION > VERSION \
-		&& git commit -a -m "Version $$NEWVERSION" \
-		&& git tag $$NEWVERSION \
-		&& git push --tag
+install:
+	python3 -m pip install -e ".[dev]"
 
-develop:
-	@python3 -m pip install -e .[develop]
+build:
+	python3 -m build
 
 clean:
-	@find . -name '__pycache__' | xargs rm -fr
+	rm -rf build dist .coverage .pytest_cache .ruff_cache
+	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 
 help:
-	@echo "\
-Targets\n\
-------------------------------------------------------------------------\n\
- test:		Perform unit testing on the source code\n\
- lint:		Perform quality checks on the source code\n\
- major:		Creates an incremented Major Tag\n\
- minor:		Creates an incremented Minor Tag\n\
- patch:		Creates an incremented Patch Tag\n\
- develop:	Installs all requirements and testing requirements\n\
- clean:		Removes built Python Packages and cached byte code\n\
- help:		Displays the help menu with all the targets\n";
+	@printf "Targets: install format lint type_check test test_report build clean\n"
 
 .DEFAULT_GOAL := help
-.PHONY: test lint patch dev clean help
+.PHONY: test test_report lint type_check format install build clean help

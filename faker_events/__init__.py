@@ -1,30 +1,24 @@
-# MIT License
-#
-# Copyright (c) 2020 johnbrandborg
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-"""
-Faker-Events Library for Generating Events with formatted fake data for streams
-"""
+"""Generate realistic, stateful event streams without production data."""
 
-from .events import EventGenerator, Event
-from .profiles import ProfileGenerator
-from .handlers import Stream
+from .__about__ import __version__
+from .engine import SKIP, Event, EventGenerator
+from .models import EventContext, GeneratedEvent, GeneratorConfig, Profile
+from .outputs import ConsoleOutput, KafkaOutput, KinesisOutput, MemoryOutput, Output
+from .profile_factory import ProfileGenerator
 
-__all__ = ['EventGenerator', 'Event', 'ProfileGenerator', 'Stream']
+__all__ = [
+    "SKIP",
+    "ConsoleOutput",
+    "Event",
+    "EventContext",
+    "EventGenerator",
+    "GeneratedEvent",
+    "GeneratorConfig",
+    "KafkaOutput",
+    "KinesisOutput",
+    "MemoryOutput",
+    "Output",
+    "Profile",
+    "ProfileGenerator",
+    "__version__",
+]
