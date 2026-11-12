@@ -67,6 +67,20 @@ def test_event_chaining_rejects_invalid_values() -> None:
         event.then(["invalid"])  # ty: ignore[invalid-argument-type]
 
 
+def test_v1_chaining_forms_remain_available() -> None:
+    first = Event({}, None, 2)
+    second = Event({})
+
+    returned = first << second
+
+    assert returned is second
+    assert first.next == [second]
+    first.next = None
+    assert first.next is None
+    first.next = second
+    assert first.next_events == (second,)
+
+
 def test_event_context_deeply_merges_values() -> None:
     context = EventContext(
         data={"nested": {"one": 1}},
@@ -153,11 +167,49 @@ def test_grouped_successor_stays_adjacent_to_parent_in_scheduled_batch(
     assert events[-2].time == events[-1].time
 
 
+def test_branching_and_multiple_first_flows_remain_available(
+    profiles: list[Profile],
+) -> None:
+    root = Event({"type": "root"})
+    left = Event({"type": "left"})
+    right = Event({"type": "right"})
+    independent = Event({"type": "independent"})
+    root >> [left, right]
+
+    events = list(
+        EventGenerator(
+            profiles[:1],
+            [root, independent],
+            config=GeneratorConfig(seed=2),
+        ).generate()
+    )
+
+    assert sorted(event.data["type"] for event in events) == [
+        "independent",
+        "left",
+        "right",
+        "root",
+    ]
+
+
 def test_generators_do_not_share_event_state(profiles: list[Profile]) -> None:
     event = Event({"count": 0}, lambda context, _: {"count": context.data["count"] + 1})
 
     first = list(EventGenerator(profiles[:1], event).generate())
     second = list(EventGenerator(profiles[:1], event).generate())
+
+    assert first[0].data["count"] == second[0].data["count"] == 1
+
+
+def test_lazy_generation_restarts_after_exhaustion(profiles: list[Profile]) -> None:
+    event = Event(
+        {"count": 0},
+        lambda context, _: {"count": context.data["count"] + 1},
+    )
+    generator = EventGenerator(profiles[:1], event)
+
+    first = list(generator.generate())
+    second = list(generator.generate())
 
     assert first[0].data["count"] == second[0].data["count"] == 1
 
@@ -474,6 +526,19 @@ def test_batch_rejects_reversed_range(profiles: list[Profile]) -> None:
 
     with pytest.raises(ValueError, match="end"):
         list(generator.iter_batch(start, end))
+
+
+def test_batch_timestamps_honor_configured_timezone(profiles: list[Profile]) -> None:
+    generator = EventGenerator(
+        profiles[:1],
+        Event({"type": "activity"}),
+        config=GeneratorConfig(timezone="Europe/Copenhagen"),
+    )
+    start = datetime(2025, 1, 1, tzinfo=UTC)
+
+    event = next(generator.iter_batch(start, start))
+
+    assert event.time.isoformat() == "2025-01-01T01:00:00+01:00"
 
 
 def test_batch_does_not_process_activity_after_end(profiles: list[Profile]) -> None:

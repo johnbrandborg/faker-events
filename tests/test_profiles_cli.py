@@ -1,7 +1,9 @@
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
+from faker import Faker
 from typer.testing import CliRunner
 
 from faker_events import MemoryOutput, Profile, ProfileGenerator, __version__
@@ -14,6 +16,71 @@ def test_profiles_are_deterministic() -> None:
     second = ProfileGenerator(seed=42).create(1)
 
     assert first == second
+
+
+def test_generated_profiles_preserve_v1_fields() -> None:
+    profile = ProfileGenerator(seed=42).create(1)[0]
+    fields = {
+        "id",
+        "uuid",
+        "username",
+        "gender",
+        "first_name",
+        "middle_name",
+        "last_name",
+        "prefix_name",
+        "suffix_name",
+        "birthdate",
+        "blood_group",
+        "email",
+        "employer",
+        "job",
+        "full_address1",
+        "building_number1",
+        "street_name1",
+        "street_suffix1",
+        "state1",
+        "postcode1",
+        "city1",
+        "phone1",
+        "full_address2",
+        "building_number2",
+        "street_name2",
+        "street_suffix2",
+        "state2",
+        "postcode2",
+        "city2",
+        "phone2",
+        "driver_license",
+        "license_plate",
+    }
+
+    data = profile.model_dump()
+    assert fields <= data.keys()
+    assert data["full_address1"] != data["full_address2"]
+    assert data["name"] == f"{data['first_name']} {data['last_name']}"
+    assert data["email"].startswith(f"{data['first_name']}.{data['last_name']}@")
+    assert isinstance(data["birthdate"], date)
+    today = date.today()
+    birthdate = data["birthdate"]
+    age = (
+        today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+    )
+    assert 18 <= age <= 80
+    for suffix in ("1", "2"):
+        address = data[f"full_address{suffix}"]
+        assert data[f"building_number{suffix}"] in address
+        assert data[f"street_name{suffix}"] in address
+        assert data[f"street_suffix{suffix}"] in address
+        assert data[f"city{suffix}"] in address
+        assert data[f"state{suffix}"] in address
+        assert data[f"postcode{suffix}"] in address
+
+
+def test_profile_generator_accepts_v1_fake_argument() -> None:
+    generator = ProfileGenerator(Faker("en_AU"))
+
+    assert generator.faker.locales == ["en_AU"]
 
 
 def test_profiles_round_trip(tmp_path: Path) -> None:

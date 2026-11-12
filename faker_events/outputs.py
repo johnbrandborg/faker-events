@@ -4,6 +4,7 @@ import asyncio
 import importlib
 import sys
 from collections.abc import Callable
+from copy import deepcopy
 from typing import Any, Protocol, runtime_checkable
 
 import orjson
@@ -48,7 +49,7 @@ class MemoryOutput:
         return None
 
     async def send(self, event: dict[str, Any]) -> None:
-        self.events.append(event.copy())
+        self.events.append(deepcopy(event))
 
     async def close(self) -> None:
         return None

@@ -39,9 +39,9 @@ class Event:
         self,
         template: Mapping[str, Any] | State,
         transform: Transform | None = None,
+        limit: int = 1,
         *,
         state: State | None = None,
-        limit: int = 1,
         rate: float = 60,
         variance: float = 0.25,
         grouped: bool = False,
@@ -86,6 +86,10 @@ class Event:
         self.then(other)
         return other
 
+    def __lshift__(self, other: Event | Sequence[Event]) -> Event | Sequence[Event]:
+        self.then(other)
+        return other
+
     def __and__(self, other: Event | Sequence[Event]) -> Event | Sequence[Event]:
         self.grouped = True
         self.then(other)
@@ -104,6 +108,19 @@ class Event:
     @property
     def next_events(self) -> tuple[Event, ...]:
         return self._next
+
+    @property
+    def next(self) -> list[Event] | None:
+        """Compatibility view of the events that follow this event."""
+
+        return list(self._next) if self._next else None
+
+    @next.setter
+    def next(self, events: Event | Sequence[Event] | None) -> None:
+        if events is None:
+            self._next = ()
+        else:
+            self.then(events)
 
     def delay(self, randomizer: random.Random) -> float:
         base = 60 / self.rate
@@ -179,6 +196,8 @@ class EventGenerator:
     def generate(self, *, start: datetime | None = None) -> Iterator[GeneratedEvent]:
         """Lazily generate unscheduled events without delivering them."""
 
+        if not any(runtime.active for runtime in self._runtime):
+            self.reset()
         current = self._normalize_time(start or datetime.now(self._timezone))
         available = [index for index, runtime in enumerate(self._runtime) if runtime.active]
         forced: deque[tuple[int, Event]] = deque()

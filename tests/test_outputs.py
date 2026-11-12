@@ -21,12 +21,14 @@ async def test_console_output_writes_json_lines(capsys) -> None:
 @pytest.mark.asyncio
 async def test_memory_output_copies_events() -> None:
     output = MemoryOutput()
-    event = {"value": 1}
+    nested = {"value": 1}
+    event = {"value": 1, "nested": nested}
 
     await output.send(event)
     event["value"] = 2
+    nested["value"] = 2
 
-    assert output.events == [{"value": 1}]
+    assert output.events == [{"value": 1, "nested": {"value": 1}}]
 
 
 @pytest.mark.asyncio

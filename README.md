@@ -25,6 +25,10 @@ virtual-time batches, cron schedules, and fast JSON serialization.
 - **Outputs** deliver immutable event snapshots to JSON Lines, Kafka, Kinesis,
   or custom destinations.
 
+See the [v1→v2 regression assessment](docs/v1-v2-regression-assessment.md) for
+the complete preserved, improved, intentionally changed, and removed behavior
+matrix.
+
 ## Install
 
 ```shell
@@ -198,6 +202,12 @@ Version 2 intentionally removes global configuration:
 - Use `schedule` instead of `cron`.
 - Use `ConsoleOutput`, `KafkaOutput`, or `KinesisOutput` instead of `Stream`.
 - Return `SKIP` instead of the string `"skip"`.
+- `context.id` is an integer rather than a string.
+- `context.time` is an aware `datetime`; call `.isoformat()` when the event
+  schema requires a string.
+- `profile.birthdate` is a `date`; JSON profile files still use ISO strings.
+- Event timestamps default to UTC; set an IANA timezone such as
+  `Europe/Copenhagen` in `GeneratorConfig` when needed.
 - User scripts expose a `build(...)` function instead of mutating class state.
 
 These changes allow multiple independent generators to run safely in one
