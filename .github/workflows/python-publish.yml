@@ -1,36 +1,33 @@
-name: Upload Python Package
+name: Release
 
 on:
   release:
     types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-    - run: python -m pip install build
-    - run: python -m build
-    - uses: actions/upload-artifact@v4
-      with:
-        name: distributions
-        path: dist/
-
-  publish:
-    needs: build
+  pypi-publish:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
     environment: release
     permissions:
+      attestations: write
+      contents: read
       id-token: write
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Install uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
-        name: distributions
-        path: dist/
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+        version: "0.13.5"
+    - name: Build package
+      run: uv build
+    - name: Attest package provenance
+      uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
       with:
-        print-hash: true
+        subject-path: "dist/*"
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
