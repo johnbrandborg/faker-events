@@ -81,7 +81,33 @@ output = KafkaOutput(
 )
 ```
 
-The key callable may return `str`, `bytes`, or `None`.
+The generated event dictionary is always serialized as the Kafka message
+value. The message key is `None` unless a `key` callback is configured:
+
+```text
+key:   "customer-1000"
+value: {"type":"payment.received","customer_id":"customer-1000","amount":25}
+```
+
+The callback receives the completed event and may return `str`, `bytes`, or
+`None`:
+
+```python
+output = KafkaOutput(
+    "customer-events",
+    "broker:9092",
+    key=lambda event: event["customer_id"],
+)
+```
+
+Faker Events does not generate a separate key/value envelope. Include the
+field needed for partitioning in the event, then derive the Kafka key from
+that field. A fixed key can be supplied with a callback such as
+`key=lambda _event: "simulation-1"`.
+
+Choose keys according to the required ordering and partition distribution.
+Events with the same key are normally routed to the same Kafka partition.
+An exception raised by the key callback stops delivery.
 
 Additional keyword arguments are passed to
 `confluent_kafka.Producer`. Configuration names containing dots can be
