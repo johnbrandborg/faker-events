@@ -184,9 +184,20 @@ account_id = fake.account_id()
 ```
 
 Custom providers keep event schemas readable and can be reused across flows.
-Faker normally enables weighting, but passing `use_weighting=True` explicitly
-keeps a provider's weighted choice correct even when its Faker instance was
-created with `use_weighting=False`.
+
+Adding a custom `BaseProvider` disables default weighting for that Faker
+instance, even when it was created with `use_weighting=True`. Pass
+`use_weighting=True` to every call that must use an `OrderedDict`'s weights,
+including calls made outside the custom provider:
+
+| Call with 90/10 weights | Result |
+|---|---|
+| `fake.random_element(...)` before `add_provider()` | Weighted |
+| `fake.random_element(...)` after `add_provider()` | Uniform |
+| `Faker(use_weighting=True)` followed by `add_provider()` | Uniform |
+| `fake.random_elements(..., length=1, use_weighting=True)[0]` | Weighted |
+
+This does not affect calls with plain lists, which are intended to be uniform.
 
 `add_provider()` is not available on a multi-locale Faker proxy. Add the
 provider to each internal generator instead:
