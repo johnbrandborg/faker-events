@@ -4,7 +4,7 @@ Importing from ``faker_events`` is preferred.
 """
 
 from .engine import SKIP, Event, EventGenerator
-from .models import EventContext, GeneratedEvent, GeneratorConfig
+from .models import EventContext, GeneratedEvent, GeneratorConfig, State
 
 __all__ = [
     "SKIP",
@@ -13,4 +13,5 @@ __all__ = [
     "EventGenerator",
     "GeneratedEvent",
     "GeneratorConfig",
+    "State",
 ]

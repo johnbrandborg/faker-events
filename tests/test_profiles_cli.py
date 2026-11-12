@@ -1,10 +1,14 @@
+import json
+from datetime import date
 from pathlib import Path
 
 import pytest
+from faker import Faker
 from typer.testing import CliRunner
 
-from faker_events import ProfileGenerator, __version__
+from faker_events import MemoryOutput, Profile, ProfileGenerator, __version__
 from faker_events.cli import app
+from faker_events.demo import build
 
 
 def test_profiles_are_deterministic() -> None:
@@ -12,6 +16,71 @@ def test_profiles_are_deterministic() -> None:
     second = ProfileGenerator(seed=42).create(1)
 
     assert first == second
+
+
+def test_generated_profiles_preserve_v1_fields() -> None:
+    profile = ProfileGenerator(seed=42).create(1)[0]
+    fields = {
+        "id",
+        "uuid",
+        "username",
+        "gender",
+        "first_name",
+        "middle_name",
+        "last_name",
+        "prefix_name",
+        "suffix_name",
+        "birthdate",
+        "blood_group",
+        "email",
+        "employer",
+        "job",
+        "full_address1",
+        "building_number1",
+        "street_name1",
+        "street_suffix1",
+        "state1",
+        "postcode1",
+        "city1",
+        "phone1",
+        "full_address2",
+        "building_number2",
+        "street_name2",
+        "street_suffix2",
+        "state2",
+        "postcode2",
+        "city2",
+        "phone2",
+        "driver_license",
+        "license_plate",
+    }
+
+    data = profile.model_dump()
+    assert fields <= data.keys()
+    assert data["full_address1"] != data["full_address2"]
+    assert data["name"] == f"{data['first_name']} {data['last_name']}"
+    assert data["email"].startswith(f"{data['first_name']}.{data['last_name']}@")
+    assert isinstance(data["birthdate"], date)
+    today = date.today()
+    birthdate = data["birthdate"]
+    age = (
+        today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+    )
+    assert 18 <= age <= 80
+    for suffix in ("1", "2"):
+        address = data[f"full_address{suffix}"]
+        assert data[f"building_number{suffix}"] in address
+        assert data[f"street_name{suffix}"] in address
+        assert data[f"street_suffix{suffix}"] in address
+        assert data[f"city{suffix}"] in address
+        assert data[f"state{suffix}"] in address
+        assert data[f"postcode{suffix}"] in address
+
+
+def test_profile_generator_accepts_v1_fake_argument() -> None:
+    generator = ProfileGenerator(Faker("en_AU"))
+
+    assert generator.faker.locales == ["en_AU"]
 
 
 def test_profiles_round_trip(tmp_path: Path) -> None:
@@ -62,6 +131,23 @@ def test_cli_runs_built_in_demo() -> None:
     assert "Delivered 1 event(s)." in result.stderr
 
 
+def test_demo_payments_retain_opened_account_state() -> None:
+    generator = build(
+        [Profile(id="1000", name="Ada")],
+        MemoryOutput(),
+        seed=42,
+    )
+
+    events = [generated.data for generated in generator.generate()]
+
+    assert events[0]["type"] == "account.opened"
+    assert [event["user_id"] for event in events] == ["1000"] * 4
+    assert [event["name"] for event in events] == ["Ada"] * 4
+    balances = [event["balance"] for event in events]
+    assert balances == sorted(balances)
+    assert balances[0] == 0 < balances[-1]
+
+
 def test_cli_loads_user_script(tmp_path: Path) -> None:
     script = tmp_path / "flow.py"
     script.write_text("from faker_events.demo import build\n", encoding="utf-8")
@@ -73,6 +159,72 @@ def test_cli_loads_user_script(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert '"type":"account.opened"' in result.stdout
+
+
+def test_documented_savings_example_runs() -> None:
+    example = Path(__file__).parents[1] / "examples" / "savings.py"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "run",
+            str(example),
+            "--profiles",
+            "1",
+            "--start",
+            "2026-01-01T00:00:00+00:00",
+            "--end",
+            "2026-01-01T00:02:00+00:00",
+        ],
+    )
+
+    assert result.exit_code == 0
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [(event["type"], event["change"], event["total"]) for event in events] == [
+        ("money.saved", 10, 10),
+        ("money.saved", 110, 120),
+        ("account.fee", -10, 110),
+        ("account.fee", -10, 100),
+    ]
+
+
+def test_cli_can_persist_profile_mutations(tmp_path: Path) -> None:
+    script = tmp_path / "mutate.py"
+    script.write_text(
+        """
+from faker_events import Event, EventGenerator
+
+def build(profiles, output, **_options):
+    def mutate(_context, profile):
+        profile.last_event = "saved"
+    return EventGenerator(profiles, Event({"type": "saved"}, mutate), output=output)
+""",
+        encoding="utf-8",
+    )
+    profiles = tmp_path / "profiles.json"
+    existing = ProfileGenerator()
+    existing.entries = [
+        Profile.model_validate({"id": "1000", "name": "Ada", "existing_custom_field": "kept"})
+    ]
+    existing.save(profiles)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "run",
+            str(script),
+            "--profile-file",
+            str(profiles),
+            "--update-profiles",
+        ],
+    )
+
+    assert result.exit_code == 0
+    loaded = ProfileGenerator().load(profiles)
+    extra = loaded[0].model_extra
+    assert extra is not None
+    assert extra["last_event"] == "saved"
+    assert extra["existing_custom_field"] == "kept"
 
 
 def test_cli_rejects_script_without_builder(tmp_path: Path) -> None:

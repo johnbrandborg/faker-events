@@ -14,6 +14,21 @@ Version 2 is a ground-up rewrite for Python 3.11+. It provides isolated
 generator state, deterministic runs, validated configuration, async delivery,
 virtual-time batches, cron schedules, and fast JSON serialization.
 
+## Core concepts
+
+- **Profiles** are people or entities that act independently.
+- **State** is persistent data belonging to one profile, such as an account
+  balance or status.
+- **Activity events** simulate actions performed by people or external actors.
+- **Scheduled operations** simulate recurring system work against current
+  profile state.
+- **Outputs** deliver immutable event snapshots to JSON Lines, Kafka, Kinesis,
+  or custom destinations.
+
+See the [v1→v2 regression assessment](docs/v1-v2-regression-assessment.md) for
+the complete preserved, improved, intentionally changed, and removed behavior
+matrix.
+
 ## Install
 
 ```shell
@@ -41,6 +56,12 @@ Persist generated entities across runs:
 faker-events run --profiles 100 --profile-file profiles.json
 ```
 
+Persist profile mutations made by event transforms:
+
+```shell
+faker-events run account_flow.py --profile-file profiles.json --update-profiles
+```
+
 Generate a historical batch without sleeping:
 
 ```shell
@@ -49,92 +70,103 @@ faker-events run \
   --end 2026-01-02T00:00:00+00:00
 ```
 
-## Define a flow
+## Define a stateful flow
 
-Create `checkout.py`:
+Activity and scheduled events can share explicit state for each profile:
 
 ```python
-from typing import Any
+from faker_events import SKIP, Event, EventGenerator, ProfileGenerator, State
 
-from faker_events import (
-    Event,
-    EventContext,
-    EventGenerator,
-    GeneratorConfig,
-    Output,
-    Profile,
-)
+profiles = ProfileGenerator(seed=42).create(10)
+account = State({"total": 0})
 
 
-def build(
-    profiles: list[Profile],
-    output: Output,
-    *,
-    seed: int | None = None,
-    max_events: int | None = None,
-) -> EventGenerator:
-    template: dict[str, Any] = {
-        "type": "",
-        "event_id": 0,
-        "event_time": "",
-        "customer_id": "",
-        "total": 0,
+def save(context, _profile):
+    context.state["total"] += 110
+    return {
+        "type": "money.saved",
+        "change": 110,
+        "total": context.state["total"],
     }
 
-    def created(context: EventContext, profile: Profile) -> dict[str, Any]:
-        return {
-            "type": "cart.created",
-            "event_id": context.id,
-            "event_time": context.time.isoformat(),
-            "customer_id": profile.id,
-        }
 
-    def checked_out(context: EventContext, profile: Profile) -> dict[str, Any]:
-        return {
-            "type": "cart.checked_out",
-            "event_id": context.id,
-            "event_time": context.time.isoformat(),
-            "total": 99,
-        }
+def hourly_fee(context, _profile):
+    if context.state["total"] < 10:
+        return SKIP
+    context.state["total"] -= 10
+    return {
+        "type": "account.fee",
+        "change": -10,
+        "total": context.state["total"],
+    }
 
-    cart = Event(template, created, rate=120)
-    checkout = Event(template, checked_out, rate=30)
-    cart >> checkout
 
-    return EventGenerator(
-        profiles,
-        cart,
-        output=output,
-        config=GeneratorConfig(seed=seed, max_events=max_events),
-    )
-```
-
-Run it:
-
-```shell
-faker-events run checkout.py --profiles 10
-```
-
-Transforms may update `context.data` directly, return a mapping to merge, or
-return `SKIP` to suppress delivery. Data is stateful per event and profile.
-Use `event >> next_event` for a sequence and `event >> [a, b]` to branch.
-`limit=0` repeats indefinitely.
-
-## Scheduled events
-
-Cron events run alongside flow events:
-
-```python
-snapshot = Event(
-    {"type": "account.snapshot"},
-    schedule="*/5 * * * *",
+saved = Event({"type": "money.saved"}, save, state=account, limit=0)
+fee = Event(
+    {"type": "account.fee"},
+    hourly_fee,
+    state=account,
+    schedule="0 * * * *",
     limit=0,
 )
 
-generator = EventGenerator(profiles, [cart, snapshot], output=output)
+generator = EventGenerator(profiles, [saved, fee])
+generator.start()
 ```
 
-Schedules also work in virtual-time batches and are emitted in timestamp order.
+`State` is cloned for every profile and generator. Reusing one `State` instance
+lets human activity and system operations inspect and mutate the same entity
+without leaking state globally.
+
+See [Stateful activity and scheduled operations](docs/state-and-schedules.md)
+for detailed semantics, conditional operations, expected output, and a runnable
+savings example.
+
+For a v1-style shared event structure, use `State` directly as the template:
+
+```python
+account = State({"type": "account", "total": 0})
+saved = Event(account, save)
+fee = Event(account, hourly_fee, schedule="0 * * * *")
+```
+
+Transforms may update `context.data` or `context.state`, return a mapping to
+merge into the emitted event, or return `SKIP` to suppress delivery. State
+mutations persist even when output is skipped.
+
+Use `event >> next_event` for a sequence and `event >> [a, b]` to branch.
+`limit=0` repeats indefinitely. `max_events` bounds processing attempts,
+including skipped events, so conditional infinite flows can still terminate.
+
+## Live and batch execution
+
+The synchronous interface is suitable for scripts:
+
+```python
+generator.start()
+generator.batch(start, end)
+```
+
+Async applications can use `await generator.run_live()` and
+`await generator.run_batch(start, end)`.
+
+Virtual-time batches do not sleep. Activity and scheduled operations are
+processed strictly in timestamp order, so later activity cannot affect an
+earlier scheduled operation.
+
+## CLI scripts
+
+The CLI accepts a Python file exposing
+`build(profiles, output, *, seed, max_events) -> EventGenerator`:
+
+```shell
+faker-events run account_flow.py --profiles 10
+```
+
+Runnable examples:
+
+- [`examples/savings.py`](examples/savings.py) — shared account state with
+  recurring conditional fees.
 
 ## Outputs
 
@@ -162,11 +194,20 @@ The included Kinesis adapter batches records. The Kafka adapter uses
 Version 2 intentionally removes global configuration:
 
 - Pass profiles, first events, output, and config to `EventGenerator`.
-- Await `run_live()` or `run_batch()` instead of calling `start()`.
+- Use `start()` and `batch()` from synchronous scripts, or await their
+  `run_live()` and `run_batch()` counterparts.
+- Wrap a shared structure in `State`, or pass it with `state=`, when activity
+  and scheduled events must share persistent per-profile data.
 - Use `rate` instead of `epm`; variance is a fraction from `0` to `1`.
 - Use `schedule` instead of `cron`.
 - Use `ConsoleOutput`, `KafkaOutput`, or `KinesisOutput` instead of `Stream`.
 - Return `SKIP` instead of the string `"skip"`.
+- `context.id` is an integer rather than a string.
+- `context.time` is an aware `datetime`; call `.isoformat()` when the event
+  schema requires a string.
+- `profile.birthdate` is a `date`; JSON profile files still use ISO strings.
+- Event timestamps default to UTC; set an IANA timezone such as
+  `Europe/Copenhagen` in `GeneratorConfig` when needed.
 - User scripts expose a `build(...)` function instead of mutating class state.
 
 These changes allow multiple independent generators to run safely in one
