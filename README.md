@@ -39,6 +39,7 @@ matrix.
 - [Scheduled operations](docs/scheduling.md)
 - [Profiles](docs/profiles.md)
 - [Outputs](docs/outputs.md)
+- [AI-assisted generation and analysis](docs/ai-workflows.md)
 - [Command-line interface](docs/cli.md)
 - [Testing event flows](docs/testing.md)
 - [Migrating from v1](docs/migrating-from-v1.md)

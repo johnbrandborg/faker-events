@@ -108,6 +108,13 @@ Explore
       Deliver events to the console, memory, Kafka, Kinesis, or a custom async
       destination.
 
+   .. grid-item-card:: AI workflows
+      :link: ai-workflows
+      :link-type: doc
+
+      Design scenarios with an LLM, enrich synthetic data, analyse streams,
+      and build deterministic AI evaluation datasets.
+
 User guide
 ----------
 
@@ -121,6 +128,7 @@ User guide
    scheduling
    profiles
    outputs
+   ai-workflows
    cli
    testing
 

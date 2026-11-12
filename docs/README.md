@@ -17,6 +17,8 @@ stateful example.
   persistence, and event mutations.
 - [Outputs](outputs.md) — console, memory, Kafka, Kinesis, custom outputs, and
   delivery failure behavior.
+- [AI-assisted generation and analysis](ai-workflows.md) — scenario design,
+  synthetic text, downstream stream analysis, evaluation datasets, and safety.
 - [Command-line interface](cli.md) — all CLI options, user scripts, batches,
   profile files, and common errors.
 - [Testing event flows](testing.md) — deterministic tests, virtual time,
