@@ -26,7 +26,8 @@ Release v\ |version|
 
 **Faker Events** generates realistic, stateful event streams for development,
 demos, load tests, and data-pipeline validation without copying production
-data.
+data. Inspired by `Faker <https://faker.readthedocs.io/en/stable/>`_, it pairs
+Faker's realistic field values with event flows, state, timing, and delivery.
 
 Model human activity and scheduled system operations against shared
 per-profile state, then deliver immutable event snapshots to JSON Lines,
@@ -101,6 +102,13 @@ Explore
       Choose the correct lifecycle for run-scoped state and durable entity
       fields.
 
+   .. grid-item-card:: Generate data with Faker
+      :link: using-faker
+      :link-type: doc
+
+      Use Faker providers, locales, and custom generators for realistic,
+      reproducible profile and event fields.
+
    .. grid-item-card:: Outputs
       :link: outputs
       :link-type: doc
@@ -127,6 +135,7 @@ User guide
    state-and-schedules
    scheduling
    profiles
+   using-faker
    outputs
    ai-workflows
    cli
